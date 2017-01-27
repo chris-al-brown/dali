@@ -1,0 +1,175 @@
+# Dali language specification and code samples
+
+# Notes
+# unused: @ . , [ ] { } $ % ^ & ' ; ?
+# datatypes: enums, maps, lists?
+# functions: what is the proper syntax?
+# iteration: how to hide it?
+# control flow: how to hide it?
+
+# Comments
+
+    # This is a comment because it begins with #
+
+# Datatypes
+
+    # A number literal
+    variable: 1.0
+
+    # A string literal
+    single: "This is a single line string."
+    multiple: "This is
+    a multiline version
+    of the string."
+
+    # A boolean literal
+    variable: true
+    variable: false
+
+    # A nonexistent value
+    variable: none
+
+# Arithmetic
+
+    # Addition
+    third: first + second
+
+    # Subtraction
+    third: first - second
+
+    # Multiplication
+    third: first * second
+
+    # Division
+    third: first / second
+
+    # Negation
+    third: -first
+
+# Comparison
+
+    # Equality
+    first = second
+
+    # Less than
+    first < second
+
+    # Greater than
+    first > second
+
+# Logical
+
+    # Negation
+    !(first = second)
+
+    # And
+    first & second
+
+    # Or
+    first | second | third
+
+# Casting & conversion
+
+    # Number
+    (number: first)
+
+    # String
+    (string: second)
+
+    # Boolean
+    (boolean: third)
+
+# Grouping
+value: ((true & true) | false)
+
+# Scope
+value: ((first: true) first = true) # false
+
+# Statements
+( (first: 1.0) (second: 2.0) (first + second) )
+
+# Variables
+first: (true | false)
+
+
+
+
+
+# Sketching
+
+# Sequences...
+
+point(x:y:)
+
+line(x1:y1:x2:y2)
+line(from:to:)
+line(slope:intercept:)
+
+circle(origin:radius:)
+
+circle(x: 0.0, y: 0.0, radius: 1.0)
+
+junk: circle(x: 0.0, y: [], radius: 1.0)
+
+# circle: (x:x_sequence y:y_sequence radius:1.0)
+
+
+# maps => {name: "Chris", address: none}
+# list => [1.0, 2.0, 3.0, 4.0]
+
+
+# Make a data container
+person: (name: "Chris" address: none)
+
+# Accessors & execution
+circle: (x: y: radius:)
+
+# Interior, exterior, boundary geometry
+(sample: (circle: x: y: radius:) count:)
+(sample: (circle: y: x: radius:) count:)
+(sample: (circle: radius: x: y:) count:)
+
+
+# function: arg1: arg2: arg3: ... argN:
+# function: [arg1: arg2: arg3: ... argN:] ()
+# sample: [shape:count:]()
+
+
+# Grouping expressions
+circle: x: y: radius:
+circle: (x: y: radius:)
+(circle: x: y: radius:)
+circle: x: (y: radius:)
+
+# Control flow
+
+# Switch
+
+switch:junk key1:one key2:two key3:three
+
+switch:variable
+    case: value1
+        # do something
+    case: value2
+        # do something
+    case: value3
+        # do something
+    default:
+        # do something
+
+# Iteration
+
+# What should be printed?
+
+    print: circle: _ x: 0.0 y: 0.0   radius: 1.0 _
+
+    # vs
+
+    print: circle:   x: 0.0 y: 0.0 _ radius: 1.0 _
+
+
+
+
+
+
+
