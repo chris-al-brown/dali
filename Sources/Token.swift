@@ -31,14 +31,18 @@ public enum TokenType: CustomStringConvertible {
     
     /// Single-character tokens
     case colon                  /// :
+    case comma                  /// ,
+    case dot                    /// .
+    case braceLeft              /// [
+    case braceRight             /// ]
     case parenLeft              /// (
     case parenRight             /// )
     
     /// Single-character tokens (arithmetic)
-    case add                    /// +
-    case subtract               /// -
-    case multiply               /// *
-    case divide                 /// /
+    case plus                   /// +
+    case minus                  /// -
+    case star                   /// *
+    case slash                  /// /
 
     /// Single-character tokens (comparison)
     case equal                  /// =
@@ -46,38 +50,32 @@ public enum TokenType: CustomStringConvertible {
     case greaterThan            /// >
 
     /// Single-character tokens (logical)
-    case not                    /// !
-    case and                    /// &
-    case or                     /// |
+    case exclamation            /// !
+    case ampersand              /// &
+    case verticalBar            /// |
 
     /// Single-character tokens (comments)
-    case comment                /// # This is a comment
+    case hash                   /// # This is a comment
     
     /// Literals
-    case stringLiteral(String)  /// "This is a string"
-    case numberLiteral(Double)  /// 1.512 or 15
-    case booleanLiteral(Bool)   /// true or false
+    case string(String)         /// "This is a string"
+    case number(Double)         /// 1.512 or 15
+    case boolean(Bool)          /// true or false
     
     /// Identifier
     case identifier(String)     /// my_variable
     
     /// Keywords
     case none                   /// none
-    case boolean                /// boolean
-    case number                 /// number
-    case string                 /// string
     case print                  /// print
     
     /// End of source
     case end                    /// end
     
     public static var keywords: [String: TokenType] = [
-        "true": .booleanLiteral(true),
-        "false": .booleanLiteral(false),
+        "true": .boolean(true),
+        "false": .boolean(false),
         "none": .none,
-        "boolean": .boolean,
-        "number": .number,
-        "string": .string,
         "print": .print
     ]
     
@@ -85,48 +83,50 @@ public enum TokenType: CustomStringConvertible {
         switch self {
         case .colon:
             return "colon"
+        case .comma:
+            return "comma"
+        case .dot:
+            return "dot"
+        case .braceLeft:
+            return "braceLeft"
+        case .braceRight:
+            return "braceRight"
         case .parenLeft:
             return "parenLeft"
         case .parenRight:
             return "parenRight"
-        case .add:
-            return "add"
-        case .subtract:
-            return "subtract"
-        case .multiply:
-            return "multiply"
-        case .divide:
-            return "divide"
+        case .plus:
+            return "plus"
+        case .minus:
+            return "minus"
+        case .star:
+            return "star"
+        case .slash:
+            return "slash"
         case .equal:
             return "equal"
         case .lessThan:
             return "lessThan"
         case .greaterThan:
             return "greaterThan"
-        case .not:
-            return "not"
-        case .and:
-            return "and"
-        case .or:
-            return "or"
-        case .comment:
-            return "comment"
-        case .stringLiteral(_):
-            return "stringLiteral"
-        case .numberLiteral(_):
-            return "numberLiteral"
-        case .booleanLiteral(_):
-            return "booleanLiteral"
+        case .exclamation:
+            return "exclamation"
+        case .ampersand:
+            return "ampersand"
+        case .verticalBar:
+            return "verticalBar"
+        case .hash:
+            return "hash"
+        case .string(_):
+            return "string"
+        case .number(_):
+            return "number"
+        case .boolean(_):
+            return "boolean"
         case .identifier(_):
             return "identifier"
         case .none:
             return "none"
-        case .boolean:
-            return "boolean"
-        case .number:
-            return "number"
-        case .string:
-            return "string"
         case .print:
             return "print"
         case .end:

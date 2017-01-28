@@ -1,17 +1,16 @@
 # Dali language specification and code samples
 
 # Notes
-# unused: @ . , [ ] { } $ % ^ & ' ; ?
-# datatypes: enums, maps, lists?
-# functions: what is the proper syntax?
-# iteration: how to hide it?
-# control flow: how to hide it?
+# unused characters: @ [ ] { } $ % ^ & ' ; ?
+# control flow: lazy sequences and filters
+# type system: static typing with an optional type
+# drawing output: stdin, stdout, stderr, stdcvs (standard canvas)
 
 # Comments
 
     # This is a comment because it begins with #
 
-# Datatypes
+# Primitives datatypes
 
     # A number literal
     variable: 1.0
@@ -28,6 +27,34 @@
 
     # A nonexistent value
     variable: none
+
+# Composite datatypes
+
+    # A record type (i.e. hash, map, dictionary, etc.)
+    person: (name: "Chris" address: "101 Rivera Boulevard")
+    person.name
+    person.address: "102 Rivera Boulevard"
+
+    # A homogenous sequential type (i.e. array, list, etc.)
+    numbers: (0.0, 2.0, 4.0, 6.0, 8.0, 10.0)
+    numbers[0]
+    numbers[3]: 10.0
+
+    booleans: (true, false, true, false)
+    booleans[3]
+
+    # An invalid mixed datatype
+    (name: "Chris", 0.0, 1.0, 2.0)
+
+    # Accessors
+
+        # Getter (short hand for .? and [?])
+        get(from:person key:"name")
+        get(from:numbers index:3)
+
+        # Setter (short hand for .?: and [?]:)
+        set(to:person key:"name" value:"Bill")
+        set(to:numbers index:3 value:100.1)
 
 # Arithmetic
 
@@ -68,28 +95,18 @@
     # Or
     first | second | third
 
-# Casting & conversion
-
-    # Number
-    (number: first)
-
-    # String
-    (string: second)
-
-    # Boolean
-    (boolean: third)
-
-# Grouping
-value: ((true & true) | false)
-
-# Scope
-value: ((first: true) first = true) # false
+    # Grouping
+    value: ((true & true) | false)
 
 # Statements
-( (first: 1.0) (second: 2.0) (first + second) )
 
-# Variables
-first: (true | false)
+    # Single
+    first: 1.0
+    second: 2.0
+    first + second
+
+    # Multiple
+    (first: 1.0, second: 2.0, first + second)
 
 
 
@@ -97,29 +114,48 @@ first: (true | false)
 
 # Sketching
 
-# Sequences...
+# Control flow ...
+
+# Sequences
+
+filter(from:where:)
+
+sample(from:count:)
+sample(from:)
+sample(from:using:)
+sample(from:where:)
+
+# Standard library
+
+debug(source:)
+print(string:)
+
+# Geometry / Sequences / Lattices
 
 point(x:y:)
+size(width:height:)
 
-line(x1:y1:x2:y2)
 line(from:to:)
 line(slope:intercept:)
 
+circle(x:y:radius:)
 circle(origin:radius:)
 
-circle(x: 0.0, y: 0.0, radius: 1.0)
+triangle(origin:radius:)
+triangle(p1:p2:p3:)
 
-junk: circle(x: 0.0, y: [], radius: 1.0)
+square(origin:radius:)
+
+rectangle(origin:size:)
+
+polygon(points:)
+
+
+my_origin: point(x: 0.0, y: 0.0)
+my_circle: circle(origin: origin, radius: 1.0)
+my_sample: sample(from: my_circle, count: 10)
 
 # circle: (x:x_sequence y:y_sequence radius:1.0)
-
-
-# maps => {name: "Chris", address: none}
-# list => [1.0, 2.0, 3.0, 4.0]
-
-
-# Make a data container
-person: (name: "Chris" address: none)
 
 # Accessors & execution
 circle: (x: y: radius:)
@@ -173,3 +209,4 @@ switch:variable
 
 
 
+junk: .123

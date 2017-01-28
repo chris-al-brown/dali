@@ -138,6 +138,14 @@ public class Scanner {
             /// Single-character tokens
             case ":":
                 append(token:.colon)
+            case ",":
+                append(token:.comma)
+            case ".":
+                append(token:.dot)
+            case "[":
+                append(token:.braceLeft)
+            case "]":
+                append(token:.braceRight)
             case "(":
                 append(token:.parenLeft)
             case ")":
@@ -145,13 +153,13 @@ public class Scanner {
 
             /// Single-character tokens (arithmetic)
             case "+":
-                append(token:.add)
+                append(token:.plus)
             case "-":
-                append(token:.subtract)
+                append(token:.minus)
             case "*":
-                append(token:.multiply)
+                append(token:.star)
             case "/":
-                append(token:.divide)
+                append(token:.slash)
 
             /// Single-character tokens (comparison)
             case "=":
@@ -163,18 +171,18 @@ public class Scanner {
 
             /// Single-character tokens (logical)
             case "!":
-                append(token:.not)
+                append(token:.exclamation)
             case "&":
-                append(token:.and)
+                append(token:.ampersand)
             case "|":
-                append(token:.or)
+                append(token:.verticalBar)
 
             /// Single-character tokens (comments)
             case "#":
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
-                append(token:.comment)
+                append(token:.hash)
                 
             /// Literals (string)
             case "\"":
@@ -191,7 +199,7 @@ public class Scanner {
                     // Trim the surrounding quotes
                     let lower = source.unicodeScalars.index(after:start)
                     let upper = source.unicodeScalars.index(before:current)
-                    append(token:.stringLiteral(String(source.unicodeScalars[lower..<upper])))
+                    append(token:.string(String(source.unicodeScalars[lower..<upper])))
                 } else {
                     // Unterminated string error
                     append(error:.unterminatedString)
@@ -218,7 +226,7 @@ public class Scanner {
                     }
                     /// Attempt numeric conversion
                     if let value = Double(String(source.unicodeScalars[start..<current])) {
-                        append(token:.numberLiteral(value))
+                        append(token:.number(value))
                     } else {
                         // Failed numeric conversion error
                         append(error:.unexpectedNumericFormat)
