@@ -27,16 +27,18 @@
 
 import Foundation
 
-public enum TokenType: CustomStringConvertible {
+public enum Token {
     
     /// Single-character tokens
     case colon                  /// :
     case comma                  /// ,
     case dot                    /// .
-    case braceLeft              /// [
-    case braceRight             /// ]
+    case curlyLeft              /// {
+    case curlyRight             /// }
     case parenLeft              /// (
     case parenRight             /// )
+    case squareLeft             /// [
+    case squareRight            /// ]
     
     /// Single-character tokens (arithmetic)
     case plus                   /// +
@@ -46,13 +48,13 @@ public enum TokenType: CustomStringConvertible {
 
     /// Single-character tokens (comparison)
     case equal                  /// =
-    case lessThan               /// <
-    case greaterThan            /// >
+    case carrotLeft             /// <
+    case carrotRight            /// >
 
     /// Single-character tokens (logical)
     case exclamation            /// !
     case ampersand              /// &
-    case verticalBar            /// |
+    case bar                    /// |
 
     /// Single-character tokens (comments)
     case hash                   /// # This is a comment
@@ -66,91 +68,134 @@ public enum TokenType: CustomStringConvertible {
     case identifier(String)     /// my_variable
     
     /// Keywords
-    case none                   /// none
     case print                  /// print
     
     /// End of source
-    case end                    /// end
+    case eof                    /// eof
     
-    public static var keywords: [String: TokenType] = [
+    public static var keywords: [String: Token] = [
         "true": .boolean(true),
         "false": .boolean(false),
-        "none": .none,
         "print": .print
     ]
-    
+}
+
+extension Token: CustomStringConvertible {
+
     public var description: String {
         switch self {
         case .colon:
-            return "colon"
+            return ":"
         case .comma:
-            return "comma"
+            return ","
         case .dot:
-            return "dot"
-        case .braceLeft:
-            return "braceLeft"
-        case .braceRight:
-            return "braceRight"
+            return "."
+        case .curlyLeft:
+            return "{"
+        case .curlyRight:
+            return "}"
         case .parenLeft:
-            return "parenLeft"
+            return "("
         case .parenRight:
-            return "parenRight"
+            return ")"
+        case .squareLeft:
+            return "["
+        case .squareRight:
+            return "]"
         case .plus:
-            return "plus"
+            return "+"
         case .minus:
-            return "minus"
+            return "-"
         case .star:
-            return "star"
+            return "*"
         case .slash:
-            return "slash"
+            return "/"
         case .equal:
-            return "equal"
-        case .lessThan:
-            return "lessThan"
-        case .greaterThan:
-            return "greaterThan"
+            return "="
+        case .carrotLeft:
+            return "<"
+        case .carrotRight:
+            return ">"
         case .exclamation:
-            return "exclamation"
+            return "!"
         case .ampersand:
-            return "ampersand"
-        case .verticalBar:
-            return "verticalBar"
+            return "&"
+        case .bar:
+            return "|"
         case .hash:
-            return "hash"
-        case .string(_):
-            return "string"
-        case .number(_):
-            return "number"
-        case .boolean(_):
-            return "boolean"
-        case .identifier(_):
-            return "identifier"
-        case .none:
-            return "none"
+            return "#"
+        case .string(let value):
+            return "\"(\(value))\""
+        case .number(let value):
+            return "\(value)"
+        case .boolean(let value):
+            return "\(value)"
+        case .identifier(let value):
+            return "\(value)"
         case .print:
             return "print"
-        case .end:
-            return "end"
+        case .eof:
+            return "EOF"
         }
     }
 }
 
-public struct Token: CustomStringConvertible {
-    
-    public init(type: TokenType, lexeme: String) {
-        self.type = type
-        self.lexeme = lexeme
+extension Token: Equatable {}
+public func ==(lhs: Token, rhs: Token) -> Bool {
+    switch (lhs, rhs) {
+    case (.colon, .colon):
+        return true
+    case (.comma, .comma):
+        return true
+    case (.dot, .dot):
+        return true
+    case (.curlyLeft, .curlyLeft):
+        return true
+    case (.curlyRight, .curlyRight):
+        return true
+    case (.parenLeft, .parenLeft):
+        return true
+    case (.parenRight, .parenRight):
+        return true
+    case (.squareLeft, .squareLeft):
+        return true
+    case (.squareRight, .squareRight):
+        return true
+    case (.plus, .plus):
+        return true
+    case (.minus, .minus):
+        return true
+    case (.star, .star):
+        return true
+    case (.slash, .slash):
+        return true
+    case (.equal, .equal):
+        return true
+    case (.carrotLeft, .carrotLeft):
+        return true
+    case (.carrotRight, .carrotRight):
+        return true
+    case (.exclamation, .exclamation):
+        return true
+    case (.ampersand, .ampersand):
+        return true
+    case (.bar, .bar):
+        return true
+    case (.hash, .hash):
+        return true
+    case (.string(let lvalue), .string(let rvalue)):
+        return lvalue == rvalue
+    case (.number(let lvalue), .number(let rvalue)):
+        return lvalue == rvalue
+    case (.boolean(let lvalue), .boolean(let rvalue)):
+        return lvalue == rvalue
+    case (.identifier(let lvalue), .identifier(let rvalue)):
+        return lvalue == rvalue
+    case (.print, .print):
+        return true
+    case (.eof, .eof):
+        return true
+    default:
+        return false
     }
-    
-    public var description: String {
-        switch type {
-        case .end:
-            return "Token(\(type))"
-        default:
-            return "Token(\(type), '\(lexeme)')"
-        }
-    }
-    
-    public let type: TokenType
-    public let lexeme: String
 }

@@ -26,3 +26,129 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
+
+public enum ParserError: Error {
+    case unterminatedExpression
+}
+
+extension ParserError: CustomStringConvertible {
+    
+    public var description: String {
+        switch self {
+        case .unterminatedExpression:
+            return "Expected a closing ')' to finish the expression."
+        }
+    }
+}
+
+public final class Parser {
+    
+    public enum Result {
+        case success([(AST.Expression, Source.Location)])
+        case failure([(ParserError, Source.Location)])
+    }
+ 
+    public init(tokens: [(Token, Source.Location)]) {
+        self.tokens = tokens
+        self.expressions = []
+        self.errors = []
+        self.start = tokens.startIndex
+        self.current = tokens.startIndex
+    }
+    
+    private func advance() -> Token {
+        let token = tokens[current]
+        current = tokens.index(after:current)
+        return token.0
+    }
+
+    private func append(expression: AST.Expression) {
+        expressions.append((expression, locate()))
+    }
+    
+    private func append(error: ParserError) {
+        errors.append((error, locate()))
+    }
+
+    private func locate() -> Source.Location {
+        return tokens[start].1
+    }
+
+    private func peek() -> Token {
+        if current >= tokens.endIndex {
+            return .eof
+        }
+        return tokens[current].0
+    }
+    
+    private func reset() {
+        self.expressions = []
+        self.errors = []
+        self.start = tokens.startIndex
+        self.current = tokens.startIndex
+    }
+    
+    public func parse() -> Result {
+        /// Reset the parser
+        reset()
+        
+        /// Start converting tokens to expressions
+        while !isFinished {
+            
+            /// Advance to next token
+            start = current
+            let token = advance()
+            switch token {
+                
+            /// Parentheses
+            case .parenLeft:
+                while peek() != .parenRight && !isFinished {
+                    let _ = advance()
+                }
+                if !isFinished {
+                    /// append an expression formed from the sandwich interior
+                } else {
+                    // Unterminated expression error
+                    append(error:.unterminatedExpression)
+                }
+                
+            /// Literals
+            case .number(let value):
+                append(expression:.number(value))
+            case .string(let value):
+                append(expression:.string(value))
+            case .boolean(let value):
+                append(expression:.boolean(value))
+                
+            /// Identifier
+            case .identifier(let value):
+                if peek() == .parenLeft {
+                    /// Function call identifier
+                    
+                } else {
+                    /// Simple identifier
+                    append(expression:.variable(value))
+                }
+                
+            /// Ignore comments
+            case .hash:
+                break
+                
+            default:
+                break
+            }
+        }
+        
+        return errors.isEmpty ? .success(expressions) : .failure(errors)
+    }
+
+    private var isFinished: Bool {
+        return current >= tokens.endIndex
+    }
+
+    private var tokens: [(Token, Source.Location)]
+    private var expressions: [(AST.Expression, Source.Location)]
+    private var errors: [(ParserError, Source.Location)]
+    private var start: Int
+    private var current: Int
+}

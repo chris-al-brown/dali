@@ -27,38 +27,32 @@
 
 import Foundation
 
-public enum ScannerErrorType: String {
+public enum ScannerError: Error {
     case unexpectedCharacter
     case unexpectedNumericFormat
     case unterminatedString
 }
 
-public struct ScannerError: CustomStringConvertible {
-
-    public init(type: ScannerErrorType, line: Int, source: String, columns: Range<String.UnicodeScalarIndex>) {
-        self.type = type
-        self.line = line
-        let location = source.unicodeScalars[columns]
-        switch type {
-        case .unexpectedCharacter:
-            self.reason = "Could not parse the following character: '\(location)'"
-        case .unexpectedNumericFormat:
-            self.reason = "Only double and integer formats are supported: '\(location)'"
-        case .unterminatedString:
-            self.reason = "Strings require a closing double quote: '\(location)'"
-        }
-    }
+extension ScannerError: CustomStringConvertible {
     
     public var description: String {
-        return "ScannerError(\(line), \(type), \(reason))"
+        switch self {
+        case .unexpectedCharacter:
+            return "Encountered an unsupported character."
+        case .unexpectedNumericFormat:
+            return "Only double and integer formats are supported."
+        case .unterminatedString:
+            return "Strings require a closing double quote."
+        }
     }
-    
-    public let type: ScannerErrorType
-    public let line: Int
-    public let reason: String
 }
 
-public class Scanner {
+public final class Scanner {
+    
+    public enum Result {
+        case success([(Token, Source.Location)])
+        case failure([(ScannerError, Source.Location)])
+    }
     
     public init(source: String) {
         self.source = source
@@ -75,13 +69,12 @@ public class Scanner {
         return scalar
     }
     
-    private func append(token type: TokenType) {
-        let lexeme = String(source.unicodeScalars[start..<current])
-        tokens.append(Token(type:type, lexeme:lexeme))
+    private func append(token: Token) {
+        tokens.append((token, locate()))
     }
 
-    private func append(error type: ScannerErrorType) {
-        errors.append(ScannerError(type:type, line:line, source:source, columns:start..<current))
+    private func append(error: ScannerError) {
+        errors.append((error, locate()))
     }
 
     private func isAlpha(_ scalar: UnicodeScalar) -> Bool {
@@ -92,6 +85,18 @@ public class Scanner {
         return CharacterSet.decimalDigits.contains(scalar)
     }
     
+    /// TODO: This is brittle and doesn't report correct lines/columns for multiline strings
+    
+    private func locate() -> Source.Location {
+        var counter = start
+        while source.unicodeScalars[counter] != "\n" && counter != source.unicodeScalars.startIndex {
+            counter = source.unicodeScalars.index(before:counter)
+        }
+        let column = counter == source.unicodeScalars.startIndex ? 1 : source.unicodeScalars.distance(from:counter, to:start)
+        let length = source.unicodeScalars.distance(from:start, to:current)
+        return Source.Location(line:line, columns:column..<column+length)
+    }
+
     private func peek() -> UnicodeScalar {
         if current >= source.unicodeScalars.endIndex {
             return UnicodeScalar("\0")
@@ -107,16 +112,14 @@ public class Scanner {
     }
     
     private func reset() {
-        if !tokens.isEmpty {
-            self.errors = []
-            self.tokens = []
-            self.start = source.unicodeScalars.startIndex
-            self.current = source.unicodeScalars.startIndex
-            self.line = 1
-        }
+        self.errors = []
+        self.tokens = []
+        self.start = source.unicodeScalars.startIndex
+        self.current = source.unicodeScalars.startIndex
+        self.line = 1
     }
     
-    public func scan() -> (tokens: [Token], errors: [ScannerError]) {
+    public func scan() -> Result {
         /// Reset the scanner
         reset()
         /// Start the scanning
@@ -142,14 +145,18 @@ public class Scanner {
                 append(token:.comma)
             case ".":
                 append(token:.dot)
-            case "[":
-                append(token:.braceLeft)
-            case "]":
-                append(token:.braceRight)
+            case "{":
+                append(token:.curlyLeft)
+            case "}":
+                append(token:.curlyRight)
             case "(":
                 append(token:.parenLeft)
             case ")":
                 append(token:.parenRight)
+            case "[":
+                append(token:.squareLeft)
+            case "]":
+                append(token:.squareRight)
 
             /// Single-character tokens (arithmetic)
             case "+":
@@ -165,9 +172,9 @@ public class Scanner {
             case "=":
                 append(token:.equal)
             case "<":
-                append(token:.lessThan)
+                append(token:.carrotLeft)
             case ">":
-                append(token:.greaterThan)
+                append(token:.carrotRight)
 
             /// Single-character tokens (logical)
             case "!":
@@ -175,7 +182,7 @@ public class Scanner {
             case "&":
                 append(token:.ampersand)
             case "|":
-                append(token:.verticalBar)
+                append(token:.bar)
 
             /// Single-character tokens (comments)
             case "#":
@@ -238,7 +245,7 @@ public class Scanner {
                         let _ = advance()
                     }
                     let value = String(source.unicodeScalars[start..<current])
-                    if let keyword = TokenType.keywords[value] {
+                    if let keyword = Token.keywords[value] {
                         append(token:keyword)
                     } else {
                         append(token:.identifier(value))
@@ -253,8 +260,8 @@ public class Scanner {
         }
         
         /// EOF
-        tokens.append(Token(type:.end, lexeme:"\0"))
-        return (tokens: tokens, errors: errors)
+        tokens.append((.eof, Source.Location(line:line, column:1)))
+        return errors.isEmpty ? .success(tokens) : .failure(errors)
     }
     
     private var isFinished: Bool {
@@ -262,8 +269,8 @@ public class Scanner {
     }
     
     private let source: String
-    private var tokens: [Token]
-    private var errors: [ScannerError]
+    private var tokens: [(Token, Source.Location)]
+    private var errors: [(ScannerError, Source.Location)]
     private var start: String.UnicodeScalarIndex
     private var current: String.UnicodeScalarIndex
     private var line: Int

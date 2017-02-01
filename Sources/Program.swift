@@ -29,47 +29,51 @@ import Foundation
 
 public struct Program {
 
-    /// Log
-    private static func log(message: String, separator: String = " ", terminator: String = "\n") {
-        print(message, separator:separator, terminator:terminator)
-    }
-    
-    /// Log
-    private static func log(token: Token) {
-        print(token)
-    }
-    
-    /// Log
-    private static func log(error: ScannerError) {
-        print(error)
-    }
-
     /// Parse
-    private static func parse(source: String, tokenHandler: (Token) -> Void, errorHandler: (ScannerError) -> Void) {
+    private static func compile(source: String) {
         let scanner = Scanner(source:source)
-        let (tokens, errors) = scanner.scan()
-        if errors.isEmpty {
-            tokens.forEach(tokenHandler)
-        } else {
-            errors.forEach(errorHandler)
+        switch scanner.scan() {
+        case .success(let results):
+            print("--------------")
+            print("Scanner Tokens")
+            print("--------------")
+            results.forEach { print("\($1) token: \($0)") }
+            let parser = Parser(tokens:results)
+            switch parser.parse() {
+            case .success(let results):
+                print("------------------")
+                print("Parser Expressions")
+                print("------------------")
+                results.forEach { print("\($1) expression: \($0)") }
+            case .failure(let errors):
+                print("-------------")
+                print("Parser Errors")
+                print("-------------")
+                errors.forEach { print("\($1) Error: \($0)") }
+            }
+        case .failure(let errors):
+            print("--------------")
+            print("Scanner Errors")
+            print("--------------")
+            errors.forEach { print("\($1) Error: \($0)") }
         }
     }
 
     /// REPL
     public static func repl() {
-        log(message:"-------------------------------------")
-        log(message:" dali REPL v0.1.0 (press ^C to exit) ")
-        log(message:"-------------------------------------")
+        print("-------------------------------------")
+        print(" dali REPL v0.1.0 (press ^C to exit) ")
+        print("-------------------------------------")
         while true {
-            log(message:"> ", separator:"", terminator:"")
+            print("> ", separator:"", terminator:"")
             guard let input = readLine(strippingNewline:true) else { continue }
-            parse(source:input, tokenHandler:log, errorHandler:log)
+            compile(source:input)
         }
     }
     
     /// Script
     public static func script(atPath path: String) throws {
         let contents = try String(contentsOfFile:path, encoding:.utf8)
-        parse(source:contents, tokenHandler:log, errorHandler:log)
+        compile(source:contents)
     }
 }

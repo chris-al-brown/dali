@@ -20,31 +20,58 @@
 // THE SOFTWARE.
 //
 // dali
-// main.swift
-// 01/20/2017
-// Main entry point for the command line tool
+// Geometry.swift
+// 01/30/2017
+// Geometric primitives
 // -----------------------------------------------------------------------------
 
 import Foundation
 
+public struct Geometry {}
 
-
-
-
-switch CommandLine.arguments.count {
-case 1:
-    /// Interactive REPL
-    Program.repl()
-case 2:
-    /// Run first first argument as a script
-    do {
-        try Program.script(atPath:CommandLine.arguments[1])
-    } catch let error {
-        print(error.localizedDescription)
-        exit(EXIT_FAILURE)
+extension Geometry {
+    
+    /// Geometric regions
+    public enum Region {
+        case interior
+        case exterior
+        case boundary
     }
-default:
-    /// Print usage
-    print("Usage: dali <script>")
-    exit(EXIT_SUCCESS)
+}
+
+/// Distance metrics
+public enum Metric {
+    case chebyshev
+    case euclidean
+    case manhattan
+}
+
+public struct Point {
+    
+    public var x: Double
+    public var y: Double
+}
+
+public struct Size {
+    
+    public var width: Double
+    public var height: Double
+}
+
+public struct Line {
+    
+    public var from: Point
+    public var to: Point
+}
+
+public struct Circle {
+    
+    public var origin: Point
+    public var radius: Double
+}
+
+public struct Rectangle {
+    
+    public var origin: Point
+    public var size: Size
 }

@@ -1,10 +1,11 @@
 # Dali language specification and code samples
 
 # Notes
-# unused characters: @ [ ] { } $ % ^ & ' ; ?
-# control flow: lazy sequences and filters
+# unused characters: @ $ % ^ & ' ; ?
+# control flow: lazy sequences and predicates
 # type system: static typing with an optional type
 # drawing output: stdin, stdout, stderr, stdcvs (standard canvas)
+# support for functions, closures, classes?
 
 # Comments
 
@@ -30,12 +31,12 @@
 
 # Composite datatypes
 
-    # A record type (i.e. hash, map, dictionary, etc.)
-    person: (name: "Chris" address: "101 Rivera Boulevard")
+    # A relational type (i.e. hash, map, dictionary, etc.)
+    person: (name: "Chris", address: "101 Rivera Boulevard")
     person.name
     person.address: "102 Rivera Boulevard"
 
-    # A homogenous sequential type (i.e. array, list, etc.)
+    # A sequential type (i.e. array, list, etc.)
     numbers: (0.0, 2.0, 4.0, 6.0, 8.0, 10.0)
     numbers[0]
     numbers[3]: 10.0
@@ -106,7 +107,20 @@
     first + second
 
     # Multiple
-    (first: 1.0, second: 2.0, first + second)
+    first: 1.0, second: 2.0, third: 3.0
+    first + second + third
+
+# Functions
+
+    # Anonymous
+    { (first:second:) first + second }
+
+    # Named ("add:first:second:" for multiple dispatch and simple name mangling)
+    add: { (first:second:) first + second }
+
+    # Execution
+    add(first:1.0, second:2.0)              # 3.0
+    add(first:"Hello ", second:"world")     # "Hello world"
 
 
 
@@ -114,99 +128,129 @@
 
 # Sketching
 
-# Control flow ...
+# Slices are not supported
+# reduce: { (value:array:) reduce(value:value + array[0], array: array[1:]) }
 
 # Sequences
+# - lambda, map, reduce, filter
+# Create sequences (lattice(), series(), ...)
+# Change sequences (map: sequence1 + sequence2 => (type1 = type2))
+# Sample sequences (filter:)
+# Manipulate sequences (lambda:)
 
-filter(from:where:)
+# Functional programming primitives: reduce, filter, map
 
-sample(from:count:)
-sample(from:)
-sample(from:using:)
-sample(from:where:)
+    reduce(from:where:)
+    filter(from:where:)
+    sample(from:where:)
+    sample(from:where:count:)
+
+# Context
+
+    # @ (this, self, etc.)
+    # @.x
+    # @.y
+    # @.count
+    # @.@ (parent context)
+    # @.@.@...@ => none eventually
 
 # Standard library
 
-debug(source:)
-print(string:)
+    debug()
+    draw()
+    dump()
+    import()
+    loop()
+    print()
+    show()
 
-# Geometry / Sequences / Lattices
+# Modules
 
-point(x:y:)
-size(width:height:)
+    # Colors
 
-line(from:to:)
-line(slope:intercept:)
+    color(gray:)
+    color(red:green:blue:)
+    color(red:green:blue:alpha:)
+    color(hue:saturation:brightness:)
+    color(hue:saturation:brightness:alpha:)
 
-circle(x:y:radius:)
-circle(origin:radius:)
+    # Constant
 
-triangle(origin:radius:)
-triangle(p1:p2:p3:)
+    pi
+    e
+    sqrt2
+    sqrt3
 
-square(origin:radius:)
+    # Geometry
 
-rectangle(origin:size:)
+    point(x:y:)
+    size(width:height:)
+    line(from:to:)
+    line(slope:intercept:)
+    circle(x:y:radius:)
+    circle(origin:radius:)
+    triangle(origin:radius:)
+    triangle(p1:p2:p3:)
+    square(origin:radius:)
+    rectangle(origin:size:)
+    polygon(points:)
 
-polygon(points:)
+    # Isometry
+
+    # glide
+    # reflect
+    # rotate
+    # translate
+
+    # Lattice (bravais)
+
+    # hexagonal
+    # oblique
+    # rectangular (centered-rectangular, square)
+
+    # Math
+
+    abs()
+    cos()
+    exp()
+    log()
+    max()
+    min()
+    mod()
+    sin()
+
+    # Measurement
+
+    area(of:)
+    distance(from:to:)
+    distance(from:to:metric:)
+    length(of:)
+
+    # Noise
+
+    perlin(x)
+    perlin(x:y:)
+    perlin(x:y:z:)
+    # simplex(x)
+    # simplex(x:y:)
+    # simplex(x:y:z:)
+
+    # Random
+
+    random()
+    gaussian(mean:stddev:)
+    uniform(min:max:)
+
+    # Series
+
+    range(from:to:)
+    # arithmetic
+    # fourier
+    # geometric
+    # harmonic
+
+    # Symmetry
+
+    # mirror?
 
 
-my_origin: point(x: 0.0, y: 0.0)
-my_circle: circle(origin: origin, radius: 1.0)
-my_sample: sample(from: my_circle, count: 10)
-
-# circle: (x:x_sequence y:y_sequence radius:1.0)
-
-# Accessors & execution
-circle: (x: y: radius:)
-
-# Interior, exterior, boundary geometry
-(sample: (circle: x: y: radius:) count:)
-(sample: (circle: y: x: radius:) count:)
-(sample: (circle: radius: x: y:) count:)
-
-
-# function: arg1: arg2: arg3: ... argN:
-# function: [arg1: arg2: arg3: ... argN:] ()
-# sample: [shape:count:]()
-
-
-# Grouping expressions
-circle: x: y: radius:
-circle: (x: y: radius:)
-(circle: x: y: radius:)
-circle: x: (y: radius:)
-
-# Control flow
-
-# Switch
-
-switch:junk key1:one key2:two key3:three
-
-switch:variable
-    case: value1
-        # do something
-    case: value2
-        # do something
-    case: value3
-        # do something
-    default:
-        # do something
-
-# Iteration
-
-# What should be printed?
-
-    print: circle: _ x: 0.0 y: 0.0   radius: 1.0 _
-
-    # vs
-
-    print: circle:   x: 0.0 y: 0.0 _ radius: 1.0 _
-
-
-
-
-
-
-
-junk: .123
