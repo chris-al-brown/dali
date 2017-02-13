@@ -27,60 +27,157 @@
 
 import Foundation
 
-public enum Token {
+public struct Token {
     
-    /// Single-character tokens
-    case colon                  /// :
-    case comma                  /// ,
-    case dot                    /// .
-    case curlyLeft              /// {
-    case curlyRight             /// }
-    case parenLeft              /// (
-    case parenRight             /// )
-    case squareLeft             /// [
-    case squareRight            /// ]
+    /// Token identifier(s)
+    public enum Lexeme {
+        
+        /// Single-character tokens
+        case colon                  /// :
+        case comma                  /// ,
+        case curlyLeft              /// {
+        case curlyRight             /// }
+        case parenLeft              /// (
+        case parenRight             /// )
+        case squareLeft             /// [
+        case squareRight            /// ]
+        
+        /// Single-character tokens (arithmetic)
+        case plus                   /// +
+        case minus                  /// -
+        case star                   /// *
+        case slash                  /// /
+        
+        /// Single-character tokens (comparison)
+        case equal                  /// =
+        case carrotLeft             /// <
+        case carrotRight            /// >
+        
+        /// Single-character tokens (logical)
+        case exclamation            /// !
+        case ampersand              /// &
+        case bar                    /// |
+        
+        /// Single-character tokens (comments)
+        case hash                   /// # This is a comment
+        
+        /// Literals
+        case boolean(Bool)          /// true or false
+        case number(Double)         /// 1.512 or 15
+        case string(String)         /// "This is a string"
+        
+        /// Identifier
+        case identifier(String)     /// my_variable
+        
+        /// Keywords
+//        case none                   /// none
+//        case print                  /// print
+//        case this                   /// this
+        
+        /// End of line and stream
+        case eol                    /// eol
+        case eos                    /// eos
+        
+        public static var keywords: [String: Lexeme] = [
+            "true": .boolean(true),
+            "false": .boolean(false)
+        ]
+        
+        /// Strict equality doesn't matter for non-associated types
+        public func isEqual(to other: Lexeme, withStrictEquality strict: Bool) -> Bool {
+            switch (self, other) {
+            case (.colon, .colon):
+                return true
+            case (.comma, .comma):
+                return true
+            case (.curlyLeft, .curlyLeft):
+                return true
+            case (.curlyRight, .curlyRight):
+                return true
+            case (.parenLeft, .parenLeft):
+                return true
+            case (.parenRight, .parenRight):
+                return true
+            case (.squareLeft, .squareLeft):
+                return true
+            case (.squareRight, .squareRight):
+                return true
+            case (.plus, .plus):
+                return true
+            case (.minus, .minus):
+                return true
+            case (.star, .star):
+                return true
+            case (.slash, .slash):
+                return true
+            case (.equal, .equal):
+                return true
+            case (.carrotLeft, .carrotLeft):
+                return true
+            case (.carrotRight, .carrotRight):
+                return true
+            case (.exclamation, .exclamation):
+                return true
+            case (.ampersand, .ampersand):
+                return true
+            case (.bar, .bar):
+                return true
+            case (.hash, .hash):
+                return true
+            case (.string(let lvalue), .string(let rvalue)):
+                return strict ? lvalue == rvalue : true
+            case (.number(let lvalue), .number(let rvalue)):
+                return strict ? lvalue == rvalue : true
+            case (.boolean(let lvalue), .boolean(let rvalue)):
+                return strict ? lvalue == rvalue : true
+            case (.identifier(let lvalue), .identifier(let rvalue)):
+                return strict ? lvalue == rvalue : true
+            case (.eol, .eol):
+                return true
+            case (.eos, .eos):
+                return true
+            default:
+                return false
+            }
+        }
+    }
     
-    /// Single-character tokens (arithmetic)
-    case plus                   /// +
-    case minus                  /// -
-    case star                   /// *
-    case slash                  /// /
+    /// Source location of a token
+    public struct Location {
+        
+        /// Single character
+        public init(line: Int, column: Int) {
+            self.line = line
+            self.columns = column...column
+        }
+        
+        /// Multiple characters
+        public init(line: Int, columns: ClosedRange<Int>) {
+            self.line = line
+            self.columns = columns
+        }
+        
+        public let line: Int
+        public let columns: ClosedRange<Int>
+    }
+    
+    public init(_ lexeme: Lexeme, _ location: Location) {
+        self.lexeme = lexeme
+        self.location = location
+    }
 
-    /// Single-character tokens (comparison)
-    case equal                  /// =
-    case carrotLeft             /// <
-    case carrotRight            /// >
-
-    /// Single-character tokens (logical)
-    case exclamation            /// !
-    case ampersand              /// &
-    case bar                    /// |
-
-    /// Single-character tokens (comments)
-    case hash                   /// # This is a comment
-    
-    /// Literals
-    case string(String)         /// "This is a string"
-    case number(Double)         /// 1.512 or 15
-    case boolean(Bool)          /// true or false
-    
-    /// Identifier
-    case identifier(String)     /// my_variable
-    
-    /// Keywords
-    case print                  /// print
-    
-    /// End of source
-    case eof                    /// eof
-    
-    public static var keywords: [String: Token] = [
-        "true": .boolean(true),
-        "false": .boolean(false),
-        "print": .print
-    ]
+    public let lexeme: Lexeme
+    public let location: Location
 }
 
 extension Token: CustomStringConvertible {
+    
+    public var description: String {
+        return "\(location) Token: \(lexeme)"
+    }
+}
+
+extension Token.Lexeme: CustomStringConvertible {
 
     public var description: String {
         switch self {
@@ -88,8 +185,6 @@ extension Token: CustomStringConvertible {
             return ":"
         case .comma:
             return ","
-        case .dot:
-            return "."
         case .curlyLeft:
             return "{"
         case .curlyRight:
@@ -125,77 +220,28 @@ extension Token: CustomStringConvertible {
         case .hash:
             return "#"
         case .string(let value):
-            return "\"(\(value))\""
+            return "\"\(value)\""
         case .number(let value):
             return "\(value)"
         case .boolean(let value):
             return "\(value)"
         case .identifier(let value):
             return "\(value)"
-        case .print:
-            return "print"
-        case .eof:
-            return "EOF"
+        case .eol:
+            return "EOL"
+        case .eos:
+            return "EOS"
         }
     }
 }
 
-extension Token: Equatable {}
-public func ==(lhs: Token, rhs: Token) -> Bool {
-    switch (lhs, rhs) {
-    case (.colon, .colon):
-        return true
-    case (.comma, .comma):
-        return true
-    case (.dot, .dot):
-        return true
-    case (.curlyLeft, .curlyLeft):
-        return true
-    case (.curlyRight, .curlyRight):
-        return true
-    case (.parenLeft, .parenLeft):
-        return true
-    case (.parenRight, .parenRight):
-        return true
-    case (.squareLeft, .squareLeft):
-        return true
-    case (.squareRight, .squareRight):
-        return true
-    case (.plus, .plus):
-        return true
-    case (.minus, .minus):
-        return true
-    case (.star, .star):
-        return true
-    case (.slash, .slash):
-        return true
-    case (.equal, .equal):
-        return true
-    case (.carrotLeft, .carrotLeft):
-        return true
-    case (.carrotRight, .carrotRight):
-        return true
-    case (.exclamation, .exclamation):
-        return true
-    case (.ampersand, .ampersand):
-        return true
-    case (.bar, .bar):
-        return true
-    case (.hash, .hash):
-        return true
-    case (.string(let lvalue), .string(let rvalue)):
-        return lvalue == rvalue
-    case (.number(let lvalue), .number(let rvalue)):
-        return lvalue == rvalue
-    case (.boolean(let lvalue), .boolean(let rvalue)):
-        return lvalue == rvalue
-    case (.identifier(let lvalue), .identifier(let rvalue)):
-        return lvalue == rvalue
-    case (.print, .print):
-        return true
-    case (.eof, .eof):
-        return true
-    default:
-        return false
+extension Token.Location: CustomStringConvertible {
+    
+    public var description: String {
+        if columns.count == 1 {
+            return "[line: \(line), column: \(columns.lowerBound)]"
+        } else {
+            return "[line: \(line), columns: \(columns.lowerBound)-\(columns.upperBound)]"
+        }
     }
 }

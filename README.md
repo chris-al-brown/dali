@@ -37,6 +37,14 @@ dali is a ...
 
 2. [LLVM Tutorial](http://llvm.org/docs/tutorial/index.html)
 
+3. [Building a LISP from scratch with Swift](https://www.uraimo.com/2017/02/05/building-a-lisp-from-scratch-with-swift/)
+
+4. [Let’s Build a Compiler](http://blog.analogmachine.org/2011/09/20/lets-build-a-compiler/)
+
+5. [PL/0](https://en.wikipedia.org/wiki/PL/0)
+
+6. [Extended Bachus-Naur form](https://en.wikipedia.org/wiki/Extended_Backus–Naur_form)
+
 ## License
 
 dali is released under the [MIT License](LICENSE.md).

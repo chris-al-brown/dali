@@ -27,24 +27,22 @@
 
 import Foundation
 
-
-
-
-
-switch CommandLine.arguments.count {
-case 1:
-    /// Interactive REPL
-    Program.repl()
-case 2:
-    /// Run first first argument as a script
+let args = CommandLine.arguments
+if args.count == 1 {
+    /// Run as a REPL
+    Dali.REPL()
+} else if args.count == 2 {
+    /// Run as a script
     do {
-        try Program.script(atPath:CommandLine.arguments[1])
+        let path = args[1]
+        let contents = try String(contentsOfFile:path, encoding:.utf8)
+        Dali.compile(source:contents)
+        Dali.exit(with:.success)
     } catch let error {
-        print(error.localizedDescription)
-        exit(EXIT_FAILURE)
+        Dali.exit(with:.failure(error.localizedDescription))
     }
-default:
+} else {
     /// Print usage
     print("Usage: dali <script>")
-    exit(EXIT_SUCCESS)
+    Dali.exit(with:.success)
 }

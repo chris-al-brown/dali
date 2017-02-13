@@ -21,91 +21,200 @@
 //
 // dali
 // AST.swift
-// 01/31/2017
+// 02/10/2017
 // Abstract syntax tree for the language
 // -----------------------------------------------------------------------------
 
 import Foundation
 
+/// AST (see EBNF grammer in Parser.swift)
 public struct AST {
-    
-    /// Expression in dali
-    public indirect enum Expression {
+
+    public enum BinaryOperator {
         
-        /// binary operator (expr1 bop expr2)
-        case binary(Operator.Binary, Expression, Expression)
+        case assign             /// :
         
-        /// boolean literal
-        case boolean(Bool)
+        /// Note: This works great except call requires a list of expressions
         
-        /// function call (callee, args)
-        case call(String, [Expression])
+        /// case get            /// [ ]
+        /// case set            /// :
+        /// case call           /// ( )
         
-        /// number literal
-        case number(Double)
+        case add                /// +
+        case subtract           /// -
+        case multiply           /// *
+        case divide             /// /
         
-        /// string literal
-        case string(String)
+        case equalTo            /// =
+        case lessThan           /// <
+        case greaterThan        /// >
         
-        /// unary operator (uop expr)
-        case unary(Operator.Unary, Expression)
+        case and                /// &
+        case or                 /// |
         
-        /// variable
-        case variable(String)
-    }
-    
-    /// Function definition
-    public struct Function {
-        
-        /// Function prototype
-        public struct Prototype {
-            
-            public let name: String
-            public let args: [String]
-        }
-        
-        public let prototype: Prototype
-        public let body: Expression
-    }
-    
-    /// Operators in dali
-    public struct Operator {
-        
-        /// Available binary operators
-        public enum Binary {
-            
-            /// Arithmetic operators
-            case add                /// +
-            case subtract           /// -
-            case multiply           /// *
-            case divide             /// /
-            
-            /// Comparison operators
-            case equal              /// =
-            case lessThan           /// <
-            case greaterThan        /// >
-            
-            /// Logical operators
-            case and                /// &
-            case or                 /// |
-            
-            public var precedence: Int {
-                return 0
+        public init?(_ lexeme: Token.Lexeme) {
+            switch lexeme {
+            case .colon:
+                self = .assign
+            case .plus:
+                self = .add
+            case .minus:
+                self = .subtract
+            case .star:
+                self = .multiply
+            case .slash:
+                self = .divide
+            case .equal:
+                self = .equalTo
+            case .carrotLeft:
+                self = .lessThan
+            case .carrotRight:
+                self = .greaterThan
+            case .ampersand:
+                self = .and
+            case .bar:
+                self = .or
+            default:
+                return nil
             }
         }
         
-        /// Available unary operators
-        public enum Unary {
-            
-            /// Negative operator
-            case negative           /// -
-            
-            /// Logical operator
-            case not                /// !
-            
-            public var precedence: Int {
-                return 0
+        public var lexeme: Token.Lexeme {
+            switch self {
+            case .assign:
+                return .colon
+            case .add:
+                return .plus
+            case .subtract:
+                return .minus
+            case .multiply:
+                return .star
+            case .divide:
+                return .slash
+            case .equalTo:
+                return .equal
+            case .lessThan:
+                return .carrotLeft
+            case .greaterThan:
+                return .carrotRight
+            case .and:
+                return .ampersand
+            case .or:
+                return .bar
+            }
+        }
+
+        public var precedence: Int {
+            switch self {
+            case .assign:
+                return 1
+            case .and:
+                return 2
+            case .or:
+                return 2
+            case .equalTo:
+                return 4
+            case .lessThan:
+                return 8
+            case .greaterThan:
+                return 8
+            case .add:
+                return 16
+            case .subtract:
+                return 16
+            case .multiply:
+                return 32
+            case .divide:
+                return 32
+            }
+        }
+    }
+    
+    public indirect enum Expression {
+        
+        /// person[name]
+        case access(Identifier, Expression)
+
+        /// circle(x, y, radius)
+        case call(Identifier, [Expression])
+        
+        /// name: "Chris"
+        /// 1 + 1
+        case binary(Expression, BinaryOperator, Expression)
+        
+        /// !true
+        /// +index
+        case unary(UnaryOperator, Expression)
+        
+        /// false
+        case boolean(Bool)
+        
+        /// 1.512
+        case number(Double)
+        
+        /// "message"
+        case string(String)
+
+        /// my_variable
+        case identifier(Identifier)
+    }
+
+    public typealias Identifier = String
+
+    public typealias Statement = Expression
+    
+    public enum UnaryOperator {
+        case positive           /// +
+        case negative           /// -
+        case not                /// !
+        
+        public init?(_ lexeme: Token.Lexeme) {
+            switch lexeme {
+            case .plus:
+                self = .positive
+            case .minus:
+                self = .negative
+            case .exclamation:
+                self = .not
+            default:
+                return nil
+            }
+        }
+        
+        public var lexeme: Token.Lexeme {
+            switch self {
+            case .positive:
+                return .plus
+            case .negative:
+                return .minus
+            case .not:
+                return .exclamation
+            }
+        }
+
+        public var precedence: Int {
+            switch self {
+            case .positive:
+                return 64
+            case .negative:
+                return 64
+            case .not:
+                return 64
             }
         }
     }
 }
+
+///// Function definition
+//public struct Function {
+//    
+//    /// Function prototype
+//    public struct Prototype {
+//        
+//        public let name: String
+//        public let args: [String]
+//    }
+//    
+//    public let prototype: Prototype
+//    public let body: Expression
+//}

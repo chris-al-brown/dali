@@ -27,31 +27,20 @@
 
 import Foundation
 
-public enum ScannerError: Error {
-    case unexpectedCharacter
-    case unexpectedNumericFormat
-    case unterminatedString
-}
-
-extension ScannerError: CustomStringConvertible {
-    
-    public var description: String {
-        switch self {
-        case .unexpectedCharacter:
-            return "Encountered an unsupported character."
-        case .unexpectedNumericFormat:
-            return "Only double and integer formats are supported."
-        case .unterminatedString:
-            return "Strings require a closing double quote."
-        }
-    }
-}
-
 public final class Scanner {
     
+    public enum Error: Swift.Error {
+        case unexpectedCharacter(UnicodeScalar, Location)
+        case unsupportedNumericFormat(String, Location)
+        case unsupportedMultilineString(Location)
+        case unterminatedString(Location)
+    }
+
+    public typealias Location = Token.Location
+
     public enum Result {
-        case success([(Token, Source.Location)])
-        case failure([(ScannerError, Source.Location)])
+        case success([Token])
+        case failure([Error])
     }
     
     public init(source: String) {
@@ -69,12 +58,16 @@ public final class Scanner {
         return scalar
     }
     
-    private func append(token: Token) {
-        tokens.append((token, locate()))
+    private func append(lexeme: Token.Lexeme) {
+        append(lexeme:lexeme, location:locate())
     }
 
-    private func append(error: ScannerError) {
-        errors.append((error, locate()))
+    private func append(lexeme: Token.Lexeme, location: Location) {
+        tokens.append(Token(lexeme, location))
+    }
+
+    private func append(error: Error) {
+        errors.append(error)
     }
 
     private func isAlpha(_ scalar: UnicodeScalar) -> Bool {
@@ -85,16 +78,26 @@ public final class Scanner {
         return CharacterSet.decimalDigits.contains(scalar)
     }
     
-    /// TODO: This is brittle and doesn't report correct lines/columns for multiline strings
+    private func locate() -> Location {
+        return locate(startingAt:start)
+    }
+
+    private func locateEOL() -> Location {
+        /// At a '\n' so need to go back one index if it isn't the start of the string
+        let index = start == source.unicodeScalars.startIndex ? start : source.unicodeScalars.index(before:start)
+        return locate(startingAt:index)
+    }
     
-    private func locate() -> Source.Location {
-        var counter = start
+    private func locate(startingAt index: String.UnicodeScalarIndex) -> Location {
+        var counter = index
         while source.unicodeScalars[counter] != "\n" && counter != source.unicodeScalars.startIndex {
             counter = source.unicodeScalars.index(before:counter)
         }
-        let column = counter == source.unicodeScalars.startIndex ? 1 : source.unicodeScalars.distance(from:counter, to:start)
+        /// Fix for the first line that needs to be shifted by one
+        let offset = counter == source.unicodeScalars.startIndex ? 1 : 0
+        let column = source.unicodeScalars.distance(from:counter, to:start) + offset
         let length = source.unicodeScalars.distance(from:start, to:current)
-        return Source.Location(line:line, columns:column..<column+length)
+        return Location(line:line, columns:column...(column + length - 1))
     }
 
     private func peek() -> UnicodeScalar {
@@ -136,67 +139,82 @@ public final class Scanner {
             
             /// Newline
             case "\n":
+                append(lexeme:.eol, location:locateEOL())
                 line += 1
                 
             /// Single-character tokens
             case ":":
-                append(token:.colon)
+                append(lexeme:.colon)
             case ",":
-                append(token:.comma)
+                append(lexeme:.comma)
+                
             case ".":
-                append(token:.dot)
+                /// Literals (number) without integer parts (e.g. .125)
+                while isDigit(peek()) {
+                    let _ = advance()
+                }
+                /// Attempt numeric conversion
+                let valueString = String(source.unicodeScalars[start..<current])
+                if let value = Double(valueString) {
+                    append(lexeme:.number(value))
+                } else {
+                    // Failed numeric conversion error
+                    append(error:.unsupportedNumericFormat(valueString, locate()))
+                }
+                
             case "{":
-                append(token:.curlyLeft)
+                append(lexeme:.curlyLeft)
             case "}":
-                append(token:.curlyRight)
+                append(lexeme:.curlyRight)
             case "(":
-                append(token:.parenLeft)
+                append(lexeme:.parenLeft)
             case ")":
-                append(token:.parenRight)
+                append(lexeme:.parenRight)
             case "[":
-                append(token:.squareLeft)
+                append(lexeme:.squareLeft)
             case "]":
-                append(token:.squareRight)
+                append(lexeme:.squareRight)
 
             /// Single-character tokens (arithmetic)
             case "+":
-                append(token:.plus)
+                append(lexeme:.plus)
             case "-":
-                append(token:.minus)
+                append(lexeme:.minus)
             case "*":
-                append(token:.star)
+                append(lexeme:.star)
             case "/":
-                append(token:.slash)
+                append(lexeme:.slash)
 
             /// Single-character tokens (comparison)
             case "=":
-                append(token:.equal)
+                append(lexeme:.equal)
             case "<":
-                append(token:.carrotLeft)
+                append(lexeme:.carrotLeft)
             case ">":
-                append(token:.carrotRight)
+                append(lexeme:.carrotRight)
 
             /// Single-character tokens (logical)
             case "!":
-                append(token:.exclamation)
+                append(lexeme:.exclamation)
             case "&":
-                append(token:.ampersand)
+                append(lexeme:.ampersand)
             case "|":
-                append(token:.bar)
+                append(lexeme:.bar)
 
             /// Single-character tokens (comments)
             case "#":
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
-                append(token:.hash)
+                append(lexeme:.hash)
                 
             /// Literals (string)
             case "\"":
-                var newlines = 0
+                var multipleLines = false
                 while peek() != "\"" && !isFinished {
-                    if peek() == "\n" {
-                        newlines += 1
+                    if peek() == "\n" && !multipleLines {
+                        append(error:.unsupportedMultilineString(locate()))
+                        multipleLines = true
                     }
                     let _ = advance()
                 }
@@ -206,12 +224,11 @@ public final class Scanner {
                     // Trim the surrounding quotes
                     let lower = source.unicodeScalars.index(after:start)
                     let upper = source.unicodeScalars.index(before:current)
-                    append(token:.string(String(source.unicodeScalars[lower..<upper])))
+                    append(lexeme:.string(String(source.unicodeScalars[lower..<upper])))
                 } else {
                     // Unterminated string error
-                    append(error:.unterminatedString)
+                    append(error:.unterminatedString(locate()))
                 }
-                line += newlines
                 
             /// Literals (number, boolean), identifiers and keywords
             default:
@@ -232,11 +249,12 @@ public final class Scanner {
                         }
                     }
                     /// Attempt numeric conversion
-                    if let value = Double(String(source.unicodeScalars[start..<current])) {
-                        append(token:.number(value))
+                    let valueString = String(source.unicodeScalars[start..<current])
+                    if let value = Double(valueString) {
+                        append(lexeme:.number(value))
                     } else {
                         // Failed numeric conversion error
-                        append(error:.unexpectedNumericFormat)
+                        append(error:.unsupportedNumericFormat(valueString, locate()))
                     }
 
                 /// Literals (boolean), identifiers and keywords
@@ -245,22 +263,22 @@ public final class Scanner {
                         let _ = advance()
                     }
                     let value = String(source.unicodeScalars[start..<current])
-                    if let keyword = Token.keywords[value] {
-                        append(token:keyword)
+                    if let keyword = Token.Lexeme.keywords[value] {
+                        append(lexeme:keyword)
                     } else {
-                        append(token:.identifier(value))
+                        append(lexeme:.identifier(value))
                     }
                 
                 /// Failure
                 } else {
                     // Unexpected character error
-                    append(error:.unexpectedCharacter)
+                    append(error:.unexpectedCharacter(character, locate()))
                 }
             }
         }
         
         /// EOF
-        tokens.append((.eof, Source.Location(line:line, column:1)))
+        tokens.append(Token(.eos, Location(line:line, column:1)))
         return errors.isEmpty ? .success(tokens) : .failure(errors)
     }
     
@@ -269,9 +287,25 @@ public final class Scanner {
     }
     
     private let source: String
-    private var tokens: [(Token, Source.Location)]
-    private var errors: [(ScannerError, Source.Location)]
+    private var tokens: [Token]
+    private var errors: [Error]
     private var start: String.UnicodeScalarIndex
     private var current: String.UnicodeScalarIndex
     private var line: Int
+}
+
+extension Scanner.Error: CustomStringConvertible {
+    
+    public var description: String {
+        switch self {
+        case .unexpectedCharacter(let character, let location):
+            return "\(location) ERROR: Encountered an unsupported character: '\(character)'"
+        case .unsupportedNumericFormat(let value, let location):
+            return "\(location) ERROR: Only simple double and integer formats are supported: '\(value)'"
+        case .unsupportedMultilineString(let location):
+            return "\(location) ERROR: Multiple line strings are unsupported."
+        case .unterminatedString(let location):
+            return "\(location) ERROR: Strings require a closing double quote."
+        }
+    }
 }

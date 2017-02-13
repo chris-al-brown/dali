@@ -1,103 +1,95 @@
 # Dali language specification and code samples
 
 # Notes
-# unused characters: @ $ % ^ & ' ; ?
+# unused characters: @ . $ % ^ & ' ; ?
 # control flow: lazy sequences and predicates
 # type system: static typing with an optional type
+# supported types: boolean, number, string, sequence, record, function
 # drawing output: stdin, stdout, stderr, stdcvs (standard canvas)
-# support for functions, closures, classes?
+# how to deal with function lookup, name mangling, multiple dispatch
+# support for subclassing and variable lookup chains
+# support for optional and none values
+
 
 # Comments
 
     # This is a comment because it begins with #
 
-# Primitives datatypes
+# Datatypes
 
-    # A number literal
-    variable: 1.0
+    # Primitives
 
-    # A string literal
-    single: "This is a single line string."
-    multiple: "This is
-    a multiline version
-    of the string."
+        # A number value
+        variable: 1.0
 
-    # A boolean literal
-    variable: true
-    variable: false
+        # A string value (multiline strings not supported)
+        single: "This is a single line string."
 
-    # A nonexistent value
-    variable: none
+        # A boolean value
+        variable: true
+        variable: false
 
-# Composite datatypes
+        # A nonexistent value
+        variable: none
 
-    # A relational type (i.e. hash, map, dictionary, etc.)
-    person: (name: "Chris", address: "101 Rivera Boulevard")
-    person.name
-    person.address: "102 Rivera Boulevard"
+    # Compositions
 
-    # A sequential type (i.e. array, list, etc.)
-    numbers: (0.0, 2.0, 4.0, 6.0, 8.0, 10.0)
-    numbers[0]
-    numbers[3]: 10.0
+        # A record (i.e. hash, map, dictionary, etc.)
+        person: { name: "Chris", address: "101 Rivera Boulevard" }
+        person[name]
+        person[address]: "102 Rivera Boulevard"
 
-    booleans: (true, false, true, false)
-    booleans[3]
+        # A sequence (i.e. array, list, etc.)
+        numbers: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+        numbers[0]
+        numbers[3]: numbers[3] + 10.0
 
-    # An invalid mixed datatype
-    (name: "Chris", 0.0, 1.0, 2.0)
+        booleans: [true, false, true, false]
+        booleans[3]
 
-    # Accessors
+# Operators
 
-        # Getter (short hand for .? and [?])
-        get(from:person key:"name")
-        get(from:numbers index:3)
+    # Arithmetic
 
-        # Setter (short hand for .?: and [?]:)
-        set(to:person key:"name" value:"Bill")
-        set(to:numbers index:3 value:100.1)
+        # Addition
+        third: first + second
 
-# Arithmetic
+        # Subtraction
+        third: first - second
 
-    # Addition
-    third: first + second
+        # Multiplication
+        third: first * second
 
-    # Subtraction
-    third: first - second
+        # Division
+        third: first / second
 
-    # Multiplication
-    third: first * second
+        # Negation
+        third: -first
 
-    # Division
-    third: first / second
+    # Comparison
 
-    # Negation
-    third: -first
+        # Equality
+        first = second
 
-# Comparison
+        # Less than
+        first < second
 
-    # Equality
-    first = second
+        # Greater than
+        first > second
 
-    # Less than
-    first < second
+    # Logical
 
-    # Greater than
-    first > second
+        # Negation
+        !(first = second)
 
-# Logical
+        # And
+        first & second
 
-    # Negation
-    !(first = second)
+        # Or
+        first | second | third
 
-    # And
-    first & second
-
-    # Or
-    first | second | third
-
-    # Grouping
-    value: ((true & true) | false)
+        # Grouping
+        value: ((true & true) | false)
 
 # Statements
 
@@ -107,26 +99,37 @@
     first + second
 
     # Multiple
-    first: 1.0, second: 2.0, third: 3.0
+    first: 1.0, second: .2, third: 3
     first + second + third
 
 # Functions
 
     # Anonymous
-    { (first:second:) first + second }
+    ( first, second ) { first + second }
 
-    # Named ("add:first:second:" for multiple dispatch and simple name mangling)
-    add: { (first:second:) first + second }
+    # Named
+    adder: ( first, second ) { first + second }
 
     # Execution
-    add(first:1.0, second:2.0)              # 3.0
-    add(first:"Hello ", second:"world")     # "Hello world"
+
+        # Using positional arguments
+        adder(1.0, 2.0)
+        adder("Hello ", "world")
+
+        # Using keyword arguments
+        adder(first:1.0, second:2.0)              # 3.0
+        adder(first:"Hello ", second:"world")     # "Hello world"
 
 
 
 
 
 # Sketching
+
+# Function of a single argument
+( x | !x )
+# Same as a boolean expression
+( x | !x )
 
 # Slices are not supported
 # reduce: { (value:array:) reduce(value:value + array[0], array: array[1:]) }
@@ -252,5 +255,3 @@
     # Symmetry
 
     # mirror?
-
-
