@@ -175,7 +175,7 @@ public final class Parser {
         case failure([Error])
     }
  
-    public init(tokens: [Token]) {
+    public init(_ tokens: [Token]) {
         self.tokens = tokens
         self.statements = []
         self.errors = []

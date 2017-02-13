@@ -43,7 +43,7 @@ public final class Scanner {
         case failure([Error])
     }
     
-    public init(source: String) {
+    public init(_ source: String) {
         self.source = source
         self.errors = []
         self.tokens = []
