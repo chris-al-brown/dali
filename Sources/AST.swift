@@ -31,14 +31,9 @@ import Foundation
 public struct AST {
 
     public enum BinaryOperator {
-        
-        case assign             /// :
-        
-        /// Note: This works great except call requires a list of expressions
-        
-        /// case get            /// [ ]
-        /// case set            /// :
-        /// case call           /// ( )
+        case get                /// [ ]
+        case set                /// :
+        case call               /// ( )
         
         case add                /// +
         case subtract           /// -
@@ -54,8 +49,12 @@ public struct AST {
         
         public init?(_ lexeme: Token.Lexeme) {
             switch lexeme {
+            case .squareLeft:
+                self = .get
             case .colon:
-                self = .assign
+                self = .set
+            case .parenLeft:
+                self = .call
             case .plus:
                 self = .add
             case .minus:
@@ -81,8 +80,12 @@ public struct AST {
         
         public var lexeme: Token.Lexeme {
             switch self {
-            case .assign:
+            case .get:
+                return .squareLeft
+            case .set:
                 return .colon
+            case .call:
+                return .parenLeft
             case .add:
                 return .plus
             case .subtract:
@@ -103,10 +106,10 @@ public struct AST {
                 return .bar
             }
         }
-
+        
         public var precedence: Int {
             switch self {
-            case .assign:
+            case .set:
                 return 1
             case .and:
                 return 2
@@ -126,25 +129,23 @@ public struct AST {
                 return 32
             case .divide:
                 return 32
+            case .get:
+                return 128
+            case .call:
+                return 128
             }
         }
     }
     
     public indirect enum Expression {
         
-        /// person[name]
-        case access(Identifier, Expression)
-
-        /// circle(x, y, radius)
-        case call(Identifier, [Expression])
-        
         /// name: "Chris"
-        /// 1 + 1
         case binary(Expression, BinaryOperator, Expression)
         
         /// !true
-        /// +index
         case unary(UnaryOperator, Expression)
+
+        /// ----- Primary -----
         
         /// false
         case boolean(Bool)
@@ -154,11 +155,14 @@ public struct AST {
         
         /// "message"
         case string(String)
-
+        
+        /// [x: x + 1, y: y + 1]
+        case list([Expression])
+        
         /// my_variable
-        case identifier(Identifier)
+        case variable(Identifier)
     }
-
+    
     public typealias Identifier = String
 
     public typealias Statement = Expression
@@ -189,17 +193,6 @@ public struct AST {
                 return .minus
             case .not:
                 return .exclamation
-            }
-        }
-
-        public var precedence: Int {
-            switch self {
-            case .positive:
-                return 64
-            case .negative:
-                return 64
-            case .not:
-                return 64
             }
         }
     }
