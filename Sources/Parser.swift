@@ -39,16 +39,9 @@
  program        = statement* eos
  
  statement      = expression eol
-
+ 
  -------TODO--------
  
- x
- x: 10
- x: circle()[x]
- geometry[circle][x]: 10
- geometry[circle](0, 0, 1)
- default_circle()[x]: other_circle()[x]
-
  expression     = identifier
                 | identifier ':' expression
                 | call
@@ -182,7 +175,7 @@ public final class Parser {
         case failure([Error])
     }
  
-    public init(tokens: [Token]) {
+    public init(_ tokens: [Token]) {
         self.tokens = tokens
         self.statements = []
         self.errors = []
@@ -294,35 +287,6 @@ public final class Parser {
         let _ = consume(close)
         return .list(elements)
     }
-    
-    /// TODO:
-    /// - Add unary operator parsing
-    /// - Parsing function prototypes
-    /// - Add token locations to the expressions for errors, etc.
-    
-//    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) -> AST.Expression? {
-//        var lhs = lhs
-//        while true {
-//            guard let binary = AST.BinaryOperator(current.lexeme) else {
-//                return lhs
-//            }
-//            if binary.precedence < precedence {
-//                return lhs
-//            }
-//            let _ = consume(binary.lexeme)
-//            var rhs = parsePrimary()
-//            if rhs == nil { return nil }
-//            let nextBinary = AST.BinaryOperator(current.lexeme)
-//            let nextPrecedence = nextBinary?.precedence ?? -1
-//            if precedence < nextPrecedence {
-//                rhs = parseBinaryOperator(rhs!, precedence + 1)
-//                if rhs == nil {
-//                    return nil
-//                }
-//            }
-//            lhs = .binary(lhs, binary, rhs!)
-//        }
-//    }
     
     private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) -> AST.Expression? {
         var lhs = lhs

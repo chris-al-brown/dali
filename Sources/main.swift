@@ -30,7 +30,7 @@ import Foundation
 let args = CommandLine.arguments
 if args.count == 1 {
     /// Run as a REPL
-    Dali.REPL()
+    Dali.repl()
 } else if args.count == 2 {
     /// Run as a script
     do {
@@ -39,7 +39,7 @@ if args.count == 1 {
         Dali.compile(source:contents)
         Dali.exit(with:.success)
     } catch let error {
-        Dali.exit(with:.failure(error.localizedDescription))
+        Dali.exit(with:.failure("ERROR: \(error.localizedDescription)"))
     }
 } else {
     /// Print usage

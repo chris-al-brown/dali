@@ -37,11 +37,11 @@ public struct Dali {
 
     /// Compile a program from a source string
     public static func compile(source: String) {
-        let scanner = Scanner(source:source)
+        let scanner = Scanner(source)
         switch scanner.scan() {
         case .success(let tokens):
-            tokens.forEach { token in print(token) }
-            let parser = Parser(tokens:tokens)
+            Console.print(tokens)
+            let parser = Parser(tokens)
             switch parser.parse() {
             case .success(let expressions):
                 expressions.forEach { expression in print(expression) }
@@ -51,7 +51,7 @@ public struct Dali {
         case .failure(let errors):
             errors.forEach { error in print(error) }
         }
-        print()
+        Console.print("")
     }
     
     /// Exit a running program
@@ -60,18 +60,18 @@ public struct Dali {
         case .success:
             Darwin.exit(EXIT_SUCCESS)
         case .failure(let reason):
-            print(reason)
+            Console.print(reason, color:.red)
             Darwin.exit(EXIT_FAILURE)
         }
     }
     
     /// Read-Eval-Print Loop
-    public static func REPL() -> Never {
-        print("-------------------------------------")
-        print(" dali REPL v0.1.0 (press ^C to exit) ")
-        print("-------------------------------------")
+    public static func repl() -> Never {
+        Console.print("-------------------------------------")
+        Console.print(" dali REPL v0.1.0 (press ^C to exit) ")
+        Console.print("-------------------------------------")
         while true {
-            print(">", terminator:" ")
+            Console.print(">", color:nil, separator:"", terminator:" ")
             guard let input = readLine(strippingNewline:false) else { continue }
             compile(source:input)
         }
