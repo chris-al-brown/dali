@@ -206,7 +206,7 @@ public final class Scanner {
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
-                append(lexeme:.hash)
+                append(lexeme:.hash(String(source.unicodeScalars[start..<current])))
                 
             /// Literals (string)
             case "\"":

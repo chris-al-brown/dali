@@ -213,8 +213,8 @@ public final class Parser {
         let _ = consume(.eol)
     }
     
-    private func handleComment() {
-        let _ = consume(.hash)
+    private func handleComment(_ value: String) {
+        let _ = consume(.hash(value))
         let _ = consume(.eol)
     }
     
@@ -233,8 +233,8 @@ public final class Parser {
             switch current.lexeme {
             case .eol:
                 handleBlankLine()
-            case .hash:
-                handleComment()
+            case .hash(let value):
+                handleComment(value)
             default:
                 handleStatement()
             }
