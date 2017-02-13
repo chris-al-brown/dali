@@ -59,7 +59,7 @@ public struct Token {
         case bar                    /// |
         
         /// Single-character tokens (comments)
-        case hash                   /// # This is a comment
+        case hash(String)           /// # This is a comment
         
         /// Literals
         case boolean(Bool)          /// true or false
@@ -122,8 +122,8 @@ public struct Token {
                 return true
             case (.bar, .bar):
                 return true
-            case (.hash, .hash):
-                return true
+            case (.hash(let lvalue), .hash(let rvalue)):
+                return strict ? lvalue == rvalue : true
             case (.string(let lvalue), .string(let rvalue)):
                 return strict ? lvalue == rvalue : true
             case (.number(let lvalue), .number(let rvalue)):
@@ -217,8 +217,8 @@ extension Token.Lexeme: CustomStringConvertible {
             return "&"
         case .bar:
             return "|"
-        case .hash:
-            return "#"
+        case .hash(let value):
+            return "#\(value)"
         case .string(let value):
             return "\"\(value)\""
         case .number(let value):
