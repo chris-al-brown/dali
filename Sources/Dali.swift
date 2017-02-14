@@ -189,7 +189,7 @@ public struct Dali {
             compile(source:contents)
             exit(with:.success)
         } catch let scriptError {
-            error("ScriptError: \(scriptError.localizedDescription)")
+            error("[source: '\(file)'] ScriptError: \(scriptError.localizedDescription)")
             exit(with:.failure)
         }
     }
