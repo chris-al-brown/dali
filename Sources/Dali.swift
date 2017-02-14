@@ -29,18 +29,58 @@ import Foundation
 
 public struct Dali {
     
-    /// Available exit statues
+    /// Terminal colors
+    public enum Color: String {
+        case black      = "\u{001B}[0;30m"
+        case red        = "\u{001B}[0;31m"
+        case green      = "\u{001B}[0;32m"
+        case yellow     = "\u{001B}[0;33m"
+        case blue       = "\u{001B}[0;34m"
+        case magenta    = "\u{001B}[0;35m"
+        case cyan       = "\u{001B}[0;36m"
+        case white      = "\u{001B}[0;37m"
+        
+        public func apply(_ item: Any) -> String {
+            switch Dali.launchEnv {
+            case .terminal:
+                return "\(rawValue)\(item)\u{001B}[0;0m"
+            case .xcode:
+                return "\(item)"
+            }
+        }
+    }
+    
+    /// Launch envionment
+    public enum Environment {
+        case terminal
+        case xcode
+        
+        public init() {
+            let env = ProcessInfo.processInfo.environment
+            if let value = env["XPC_SERVICE_NAME"] {
+                self = value.range(of:"Xcode") != nil ? .xcode : .terminal
+            } else {
+                self = .terminal
+            }
+        }
+    }
+    
+    public static var launchEnv: Environment = Environment()
+
+    /// Exit status
     public enum Status {
         case success
-        case failure(String)
+        case failure
     }
-
+    
     /// Compile a program from a source string
     public static func compile(source: String) {
         let scanner = Scanner(source)
-        switch scanner.scan() {
-        case .success(let tokens):
-            Console.print(tokens)
+        do {
+            let tokens = try scanner.scan()
+            log(tokens)
+            
+            /// TODO[Begin]: Clean
             let parser = Parser(tokens)
             switch parser.parse() {
             case .success(let expressions):
@@ -48,10 +88,28 @@ public struct Dali {
             case .failure(let errors):
                 errors.forEach { error in print(error) }
             }
-        case .failure(let errors):
-            errors.forEach { error in print(error) }
+            /// TODO[End]: Clean
+            
+        } catch let scanError as Scanner.Error {
+            error(scanError)
+        } catch _ {
+            fatalError()
         }
-        Console.print("")
+    }
+    
+    public static func error(_ string: String, terminator: String = "\n") {
+        log(string, color:.red, terminator:terminator)
+    }
+
+    public static func error(_ issue: Scanner.Error) {
+        let tokenCount = issue.tokens.reduce("") { $0 + " " + $1.lexeme.description }.unicodeScalars.count
+        let finalCount = issue.remainder.unicodeScalars.count
+        let infoLine = String(repeatElement("-", count:tokenCount)) + String(repeatElement("^", count:finalCount + 1))
+        
+        log(issue.tokens, terminator:"")
+        log(issue.remainder, color:.red)
+        log(infoLine, color:.red)
+        log("\(issue.location) ScannerError: \(issue.description)", color:.red, terminator:"\n\n")
     }
     
     /// Exit a running program
@@ -59,80 +117,86 @@ public struct Dali {
         switch status {
         case .success:
             Darwin.exit(EXIT_SUCCESS)
-        case .failure(let reason):
-            Console.print(reason, color:.red)
+        case .failure:
             Darwin.exit(EXIT_FAILURE)
         }
     }
     
+    public static func log(_ string: String, terminator: String = "\n") {
+        print(string, separator:"", terminator:terminator)
+    }
+    
+    public static func log(_ string: String, color: Color, terminator: String = "\n") {
+        print(color.apply(string), separator:"", terminator:terminator)
+    }
+    
+    public static func log(_ tokens: [Token], terminator: String = "\n") {
+        log("")
+        for token in tokens {
+            let lexeme = token.lexeme
+            switch lexeme {
+            /// Punctuation
+            case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
+                log(lexeme.description, terminator:" ")
+
+            /// Operators
+            case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
+                log(lexeme.description, color:.green, terminator:" ")
+                
+            /// Hash
+            case .hash:
+                log(lexeme.description, color:.black, terminator:" ")
+                
+            /// Literals
+            case .boolean(_):
+                log(lexeme.description, color:.yellow, terminator:" ")
+                
+            case .number(_):
+                log(lexeme.description, color:.blue, terminator:" ")
+                
+            case .string(_):
+                log(lexeme.description, color:.magenta, terminator:" ")
+                
+            case .identifier(_):
+                log(lexeme.description, color:.cyan, terminator:" ")
+                
+            /// Keywords (green)
+                
+            /// Newlines
+            case .eol, .eos:
+                log(lexeme.description, color:.black)
+            }
+        }
+        log("", terminator:terminator)
+    }
+    
     /// Read-Eval-Print Loop
     public static func repl() -> Never {
-        Console.print("-------------------------------------")
-        Console.print(" dali REPL v0.1.0 (press ^C to exit) ")
-        Console.print("-------------------------------------")
+        log("-------------------------------------", color:.white)
+        log(" dali REPL v0.1.0 (press ^C to exit) ", color:.white)
+        log("-------------------------------------", color:.white)
         while true {
-            Console.print(">", color:nil, separator:"", terminator:" ")
+            log(">>>", color:.white, terminator:" ")
             guard let input = readLine(strippingNewline:false) else { continue }
             compile(source:input)
         }
     }
+    
+    /// Run a script
+    public static func script(file: String) {
+        do {
+            let contents = try String(contentsOfFile:file, encoding:.utf8)
+            compile(source:contents)
+            exit(with:.success)
+        } catch let scriptError {
+            error("ScriptError: \(scriptError.localizedDescription)")
+            exit(with:.failure)
+        }
+    }
+    
+    /// Print the usage and exit
+    public static func usage() {
+        log("Usage: dali <script>")
+        exit(with:.success)
+    }
 }
-
-
-/// REPL old stuff
-
-//    public func run() -> Never {
-//        print("-------------------------------------")
-//        print(" dali REPL v0.1.0 (press ^C to exit) ")
-//        print("-------------------------------------")
-//        while true {
-//            print("1  ", terminator:"\r")
-//            fflush(stdout)
-//            sleep(1)
-//            print("2  ", terminator:"\r")
-//            fflush(stdout)
-//            sleep(1)
-//            print("3  ", terminator:"\r")
-//            fflush(stdout)
-//            sleep(1)
-//            print(">", terminator:"  ")
-//
-//            guard let input = readLine(strippingNewline:true) else { continue }
-//            compile(source:input)
-//        }
-//    }
-
-//    /// Read single input characters
-//    /// http://stackoverflow.com/questions/25551321/xcode-swift-command-line-tool-reads-1-char-from-keyboard-without-echo-or-need-to
-//    private static func read() -> Int? {
-//        var key: Int = 0
-//        let c: cc_t = 0
-//        let cct = (c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c) // Set of 20 Special Characters
-//        var oldt: termios = termios(c_iflag: 0, c_oflag: 0, c_cflag: 0, c_lflag: 0, c_cc: cct, c_ispeed: 0, c_ospeed: 0)
-//        tcgetattr(STDIN_FILENO, &oldt) // 1473
-//        var newt = oldt
-//        newt.c_lflag = 1217  // Reset ICANON and Echo off
-//        tcsetattr(STDIN_FILENO, TCSANOW, &newt)
-//        key = Int(getchar())  // works like "getch()"
-//        tcsetattr(STDIN_FILENO, TCSANOW, &oldt)
-//        return key
-//    }
-
-//    /// REPL
-//    public static func repl() {
-//        print("-------------------------------------")
-//        print(" dali REPL v0.1.0 (press ^C to exit) ")
-//        print("-------------------------------------")
-//
-//        var buffer: [CChar] = []
-//        while let key = read() {
-//            if key == Int(EOF) {
-//                print("EOF")
-//            } else {
-//                print("now!")
-//                buffer.append(CChar(key))
-//                print(String(cString:&buffer))
-//                buffer.removeAll(keepingCapacity:true)
-//            }
-//        }
-//    }
