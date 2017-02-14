@@ -29,20 +29,9 @@ import Foundation
 
 let args = CommandLine.arguments
 if args.count == 1 {
-    /// Run as a REPL
     Dali.repl()
 } else if args.count == 2 {
-    /// Run as a script
-    do {
-        let path = args[1]
-        let contents = try String(contentsOfFile:path, encoding:.utf8)
-        Dali.compile(source:contents)
-        Dali.exit(with:.success)
-    } catch let error {
-        Dali.exit(with:.failure("ERROR: \(error.localizedDescription)"))
-    }
+    Dali.script(file:args[1])
 } else {
-    /// Print usage
-    print("Usage: dali <script>")
-    Dali.exit(with:.success)
+    Dali.usage()
 }

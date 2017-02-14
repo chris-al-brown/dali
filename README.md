@@ -45,6 +45,8 @@ dali is a ...
 
 6. [Extended Bachus-Naur form](https://en.wikipedia.org/wiki/Extended_Backus–Naur_form)
 
+7. [ANSI Escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code)
+
 ## License
 
 dali is released under the [MIT License](LICENSE.md).
