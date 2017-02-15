@@ -212,15 +212,15 @@ public final class Parser {
         while !isFinished {
             switch current.lexeme {
             /// Blank lines
-            case .eol:
-                let _ = try consume(.eol)
+            case .end:
+                let _ = try consume(.end)
             /// Comments
             case .hash(let value):
                 let _ = try consume(.hash(value))
             /// Everything else
             default:
                 expressions.append(try parseExpression())
-                let _ = try consume(.eol)
+                let _ = try consume(.end)
             }
         }
         return expressions

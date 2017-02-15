@@ -123,7 +123,7 @@ public final class Scanner {
             
             /// Newline
             case "\n":
-                append(lexeme:.eol)
+                append(lexeme:.end)
                 
             /// Single-character tokens
             case ":":
