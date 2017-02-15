@@ -96,7 +96,11 @@ public struct Source: BidirectionalCollection {
     }
     
     public func extractLine(_ location: Location) -> String {
+        /// Fix for eol as starting character
         var sindex = location.lowerBound
+        if self[sindex] == "\n" && sindex != startIndex {
+            sindex = index(before:sindex)
+        }
         while self[sindex] != "\n" && sindex != startIndex {
             sindex = index(before:sindex)
         }
@@ -104,59 +108,19 @@ public struct Source: BidirectionalCollection {
         while self[eindex] != "\n" && eindex != endIndex {
             eindex = index(after:eindex)
         }
-        if sindex < eindex && self[sindex] == "\n" {
-            sindex = index(after:sindex)
-        }
-        return String(storage.unicodeScalars[sindex..<eindex])
+        return String(storage.unicodeScalars[sindex..<eindex]).trimmingCharacters(in:.newlines)
     }
-    
-    /// Format a source string based on the parsed tokens it contains
-    
-    //    public static func log(_ tokens: [Token], terminator: String = "\n") {
-    //        for token in tokens {
-    //            let lexeme = token.lexeme
-    //            switch lexeme {
-    //            /// Punctuation
-    //            case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
-    //                log(lexeme.description, terminator:" ")
-    //
-    //            /// Operators
-    //            case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
-    //                log(lexeme.description, color:.green, terminator:" ")
-    //
-    //            /// Hash
-    //            case .hash:
-    //                log(lexeme.description, color:.black, terminator:" ")
-    //
-    //            /// Literals
-    //            case .boolean(_):
-    //                log(lexeme.description, color:.yellow, terminator:" ")
-    //
-    //            case .number(_):
-    //                log(lexeme.description, color:.blue, terminator:" ")
-    //
-    //            case .string(_):
-    //                log(lexeme.description, color:.magenta, terminator:" ")
-    //
-    //            /// Identifiers & Keywords
-    //            case .identifier(_):
-    //                log(lexeme.description, color:.cyan, terminator:" ")
-    //
-    //            /// Newlines
-    //            case .eol:
-    //                log(lexeme.description, color:.black)
-    //            }
-    //        }
-    //        log("", terminator:terminator)
-    //    }
 
     public func format(error message: String, using tokens: [Token], at location: Location) -> String {
         var lineStartIndex = location.lowerBound
+        if self[lineStartIndex] == "\n" && lineStartIndex != startIndex {
+            lineStartIndex = index(before:lineStartIndex)
+        }
         while self[lineStartIndex] != "\n" && lineStartIndex != startIndex {
             lineStartIndex = index(before:lineStartIndex)
         }
         var truncatedSource = extract(startIndex..<lineStartIndex)
-        if supportsColor {
+        if supportsColor && !truncatedSource.isEmpty {
             let colors: [Token.Category: Color] = [
                 .boolean: .yellow,
                 .comment: .black,
@@ -167,17 +131,16 @@ public struct Source: BidirectionalCollection {
                 .variable: .cyan
             ]
             for token in tokens.reversed() {
-                let location = token.location
-                if location.upperBound <= truncatedSource.unicodeScalars.endIndex {
+                if token.location.upperBound <= lineStartIndex {
                     let category = token.lexeme.category
-                    let substring = truncatedSource.unicodeScalars[location]
+                    let substring = truncatedSource.unicodeScalars[token.location]
                     if let color = colors[category] {
-                        truncatedSource.unicodeScalars.replaceSubrange(location, with:color.apply(substring).unicodeScalars)
+                        truncatedSource.unicodeScalars.replaceSubrange(token.location, with:color.apply(substring).unicodeScalars)
                     }
                 }
             }
         }
-        return truncatedSource + "\n" + format(error:message, at:location)
+        return (truncatedSource + "\n" + format(error:message, at:location)).trimmingCharacters(in:.newlines)
     }
     
     public func format(error message: String, at location: Location) -> String {

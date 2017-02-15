@@ -81,7 +81,7 @@ public struct Token {
         case identifier(String)     /// my_variable
         
         /// End of line
-        case eol                    /// eol
+        case end                    /// end
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
@@ -131,7 +131,7 @@ public struct Token {
                 return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
                 return lvalue == rvalue
-            case (.eol, .eol):
+            case (.end, .end):
                 return true
             default:
                 return false
@@ -159,7 +159,7 @@ public struct Token {
                     return .string
                 case .identifier(_):
                     return .variable
-                case .eol:
+                case .end:
                     return .whitespace
             }
         }
@@ -224,8 +224,8 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .identifier(let value):
             return "\(value)"
-        case .eol:
-            return "EOL"
+        case .end:
+            return "END"
         }
     }
 }
