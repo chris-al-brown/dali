@@ -31,7 +31,7 @@ let args = CommandLine.arguments
 if args.count == 1 {
     Dali.repl()
 } else if args.count == 2 {
-    Dali.script(file:args[1])
+    Dali.script(args[1])
 } else {
     Dali.usage()
 }

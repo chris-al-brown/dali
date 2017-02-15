@@ -27,7 +27,6 @@
 
 import Foundation
 
-/// AST (see EBNF grammer in Parser.swift)
 public struct AST {
 
     public enum BinaryOperator {
@@ -141,31 +140,27 @@ public struct AST {
         
         /// name: "Chris"
         case binary(Expression, BinaryOperator, Expression)
-        
-        /// !true
-        case unary(UnaryOperator, Expression)
 
-        /// ----- Primary -----
-        
         /// false
         case boolean(Bool)
-        
+
+        /// [x: x + 1, y: y + 1]
+        case list([Expression])
+
         /// 1.512
         case number(Double)
         
         /// "message"
         case string(String)
-        
-        /// [x: x + 1, y: y + 1]
-        case list([Expression])
-        
+
+        /// !true
+        case unary(UnaryOperator, Expression)
+
         /// my_variable
         case variable(Identifier)
     }
     
     public typealias Identifier = String
-
-    public typealias Statement = Expression
     
     public enum UnaryOperator {
         case positive           /// +
@@ -197,17 +192,3 @@ public struct AST {
         }
     }
 }
-
-///// Function definition
-//public struct Function {
-//    
-//    /// Function prototype
-//    public struct Prototype {
-//        
-//        public let name: String
-//        public let args: [String]
-//    }
-//    
-//    public let prototype: Prototype
-//    public let body: Expression
-//}

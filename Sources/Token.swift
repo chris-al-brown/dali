@@ -29,8 +29,7 @@ import Foundation
 
 public struct Token {
     
-    /// Token identifier(s)
-    public enum Lexeme {
+    public enum Lexeme: Equatable {
         
         /// Single-character tokens
         case colon                  /// :
@@ -69,23 +68,16 @@ public struct Token {
         /// Identifier
         case identifier(String)     /// my_variable
         
-        /// Keywords
-//        case none                   /// none
-//        case print                  /// print
-//        case this                   /// this
-        
-        /// End of line and stream
+        /// End of line
         case eol                    /// eol
-        case eos                    /// eos
         
         public static var keywords: [String: Lexeme] = [
             "true": .boolean(true),
             "false": .boolean(false)
         ]
         
-        /// Strict equality doesn't matter for non-associated types
-        public func isEqual(to other: Lexeme, withStrictEquality strict: Bool) -> Bool {
-            switch (self, other) {
+        public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
+            switch (lhs, rhs) {
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
@@ -123,18 +115,16 @@ public struct Token {
             case (.bar, .bar):
                 return true
             case (.hash(let lvalue), .hash(let rvalue)):
-                return strict ? lvalue == rvalue : true
+                return lvalue == rvalue
             case (.string(let lvalue), .string(let rvalue)):
-                return strict ? lvalue == rvalue : true
+                return lvalue == rvalue
             case (.number(let lvalue), .number(let rvalue)):
-                return strict ? lvalue == rvalue : true
+                return lvalue == rvalue
             case (.boolean(let lvalue), .boolean(let rvalue)):
-                return strict ? lvalue == rvalue : true
+                return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
-                return strict ? lvalue == rvalue : true
+                return lvalue == rvalue
             case (.eol, .eol):
-                return true
-            case (.eos, .eos):
                 return true
             default:
                 return false
@@ -142,39 +132,13 @@ public struct Token {
         }
     }
     
-    /// Source location of a token
-    public struct Location {
-        
-        /// Single character
-        public init(line: Int, column: Int) {
-            self.line = line
-            self.columns = column...column
-        }
-        
-        /// Multiple characters
-        public init(line: Int, columns: ClosedRange<Int>) {
-            self.line = line
-            self.columns = columns
-        }
-        
-        public let line: Int
-        public let columns: ClosedRange<Int>
-    }
-    
-    public init(_ lexeme: Lexeme, _ location: Location) {
+    public init(_ lexeme: Lexeme, _ location: Source.Location) {
         self.lexeme = lexeme
         self.location = location
     }
 
     public let lexeme: Lexeme
-    public let location: Location
-}
-
-extension Token: CustomStringConvertible {
-    
-    public var description: String {
-        return "\(location) Token: \(lexeme)"
-    }
+    public let location: Source.Location
 }
 
 extension Token.Lexeme: CustomStringConvertible {
@@ -229,22 +193,10 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .eol:
             return "EOL"
-        case .eos:
-            return "EOS"
         }
     }
 }
 
-extension Token.Location: CustomStringConvertible {
-    
-    public var description: String {
-        if columns.count == 1 {
-            return "[line: \(line), column: \(columns.lowerBound)]"
-        } else {
-            return "[line: \(line), columns: \(columns.lowerBound)-\(columns.upperBound)]"
-        }
-    }
-}
 
 
 
