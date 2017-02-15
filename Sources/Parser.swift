@@ -165,63 +165,22 @@ import Foundation
 
 public final class Parser {
     
-    public enum Error: Swift.Error {
-        case unsupportedExpression(Token)
-        case unsupportedPrimary(Token)
-        
-        case unrecognizedBooleanLiteral(Token.Location, Bool)
-        case unrecognizedNumberLiteral(Token.Location, Double)
-        case unrecognizedStringLiteral(Token.Location, String)
-        case unrecognizedVariable(Token.Location, String)
-        
-        case unexpectedGroupOpen(Token, Token.Lexeme)
-        case unexpectedGroupClose(Token, Token.Lexeme)
+    public enum Error: Swift.Error, CustomStringConvertible {
+        case unexpectedToken(Token)
 
-        case unexpectedListOpen(Token, Token.Lexeme)
-        case unexpectedListNext(Token, Token.Lexeme)
-        case unexpectedListClose(Token, Token.Lexeme)
-
-        case unexpectedBinaryOperator(Token, Token.Lexeme)
-        case unexpectedUnaryOperator(Token, Token.Lexeme)
-
-        public var location: Token.Location {
+        public var description: String {
             switch self {
-            case .unsupportedExpression(let token):
-                return token.location
-            case .unsupportedPrimary(let token):
-                return token.location
-            case .unrecognizedBooleanLiteral(let value, _):
-                return value
-            case .unrecognizedNumberLiteral(let value, _):
-                return value
-            case .unrecognizedStringLiteral(let value, _):
-                return value
-            case .unrecognizedVariable(let value, _):
-                return value
-            case .unexpectedGroupOpen(let token, _):
-                return token.location
-            case .unexpectedGroupClose(let token, _):
-                return token.location
-            case .unexpectedListOpen(let token, _):
-                return token.location
-            case .unexpectedListNext(let token, _):
-                return token.location
-            case .unexpectedListClose(let token, _):
-                return token.location
-            case .unexpectedBinaryOperator(let token, _):
-                return token.location
-            case .unexpectedUnaryOperator(let token, _):
-                return token.location
+            case .unexpectedToken(let token):
+                return "Encountered an unexpected token: '\(token.lexeme)'"
             }
         }
 
-//        public var expressions: [AST.Expression] {
-//            switch self {
-//            case .unexpectedToken(_, _, let value, _):
-//                return value
-//            }
-//        }
-        
+        public var location: Source.Location {
+            switch self {
+            case .unexpectedToken(let token):
+                return token.location
+            }
+        }
     }
 
     public init(_ tokens: [Token]) {
@@ -238,34 +197,14 @@ public final class Parser {
 
     private func check(_ lexeme: Token.Lexeme) -> Bool {
         if isFinished { return false }
-        return current.lexeme.isEqual(to:lexeme, withStrictEquality:true)
+        return current.lexeme == lexeme
     }
 
-    //    public enum Grammar {
-    //        case boolean
-    //        case number
-    //        case string
-    //        case variable
-    //        case group
-    //        case list
-    //        case primary
-    //        case binary
-    //        case unary
-    //        case expression
-    //    }
-
-    //    private func consume(_ lexeme: Token.Lexeme, grammar: Grammar) throws -> Token {
-    //        if !isFinished && check(lexeme) {
-    //            return advance()
-    //        }
-    //        throw Error.unexpectedToken(current, grammar, expressions, lexeme)
-    //    }
-
-    private func consume(_ lexeme: Token.Lexeme, or error: Parser.Error) throws -> Token {
+    private func consume(_ lexeme: Token.Lexeme) throws -> Token {
         if !isFinished && check(lexeme) {
             return advance()
         }
-        throw error
+        throw Error.unexpectedToken(current)
     }
     
     public func parse() throws -> [AST.Expression] {
@@ -274,56 +213,56 @@ public final class Parser {
             switch current.lexeme {
             /// Blank lines
             case .eol:
-                let _ = try consume(.eol, or:.unsupportedExpression(current))
+                let _ = try consume(.eol)
             /// Comments
             case .hash(let value):
-                let _ = try consume(.hash(value), or:.unsupportedExpression(current))
+                let _ = try consume(.hash(value))
             /// Everything else
             default:
                 expressions.append(try parseExpression())
-                let _ = try consume(.eol, or:.unsupportedExpression(current))
+                let _ = try consume(.eol)
             }
         }
         return expressions
     }
     
     private func parseBoolean(_ value: Bool) throws -> AST.Expression {
-        let _ = try consume(.boolean(value), or:.unrecognizedBooleanLiteral(current.location, value))
+        let _ = try consume(.boolean(value))
         return .boolean(value)
     }
     
     private func parseNumber(_ value: Double) throws -> AST.Expression {
-        let _ = try consume(.number(value), or:.unrecognizedNumberLiteral(current.location, value))
+        let _ = try consume(.number(value))
         return .number(value)
     }
     
     private func parseString(_ value: String) throws -> AST.Expression {
-        let _ = try consume(.string(value), or:.unrecognizedStringLiteral(current.location, value))
+        let _ = try consume(.string(value))
         return .string(value)
     }
 
     private func parseVariable(_ value: AST.Identifier) throws -> AST.Expression {
-        let _ = try consume(.identifier(value), or:.unrecognizedVariable(current.location, value))
+        let _ = try consume(.identifier(value))
         return .variable(value)
     }
 
     private func parseGroup(_ open: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
-        let _ = try consume(open, or:.unexpectedGroupOpen(current, open))
+        let _ = try consume(open)
         let result = try parseExpression()
-        let _ = try consume(close, or:.unexpectedGroupClose(current, close))
+        let _ = try consume(close)
         return result
     }
 
     private func parseList(_ open: Token.Lexeme, _ separator: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
-        let _ = try consume(open, or:.unexpectedListOpen(current, open))
+        let _ = try consume(open)
         var elements: [AST.Expression] = []
         while !check(close) {
             elements.append(try parseExpression())
             if check(separator) {
-                let _ = try consume(separator, or:.unexpectedListNext(current, separator))
+                let _ = try consume(separator)
             }
         }
-        let _ = try consume(close, or:.unexpectedListClose(current, close))
+        let _ = try consume(close)
         return .list(elements)
     }
     
@@ -342,7 +281,7 @@ public final class Parser {
         case .squareLeft:
             return try parseList(.squareLeft, .comma, .squareRight)
         default:
-            throw Error.unsupportedPrimary(current)
+            throw Error.unexpectedToken(current)
         }
     }
 
@@ -367,7 +306,7 @@ public final class Parser {
             case .call:
                 rhs = try parseList(.parenLeft, .comma, .parenRight)
             default:
-                let _ = try consume(binary.lexeme, or:.unexpectedBinaryOperator(current, binary.lexeme))
+                let _ = try consume(binary.lexeme)
                 rhs = try parseUnaryOperator()
             }
             let nextBinary = AST.BinaryOperator(current.lexeme)
@@ -383,7 +322,7 @@ public final class Parser {
         guard let unary = AST.UnaryOperator(current.lexeme) else {
             return try parsePrimary()
         }
-        let _ = try consume(unary.lexeme, or:.unexpectedUnaryOperator(current, unary.lexeme))
+        let _ = try consume(unary.lexeme)
         return .unary(unary, try parseUnaryOperator())
     }
     
@@ -397,48 +336,10 @@ public final class Parser {
     }
     
     private var isFinished: Bool {
-        return current.lexeme.isEqual(to:.eos, withStrictEquality:true)
+        return currentIndex >= tokens.endIndex
     }
 
     private let tokens: [Token]
     private var expressions: [AST.Expression]
     private var currentIndex: Int
-}
-
-extension Parser.Error: CustomStringConvertible {
-    
-    public var description: String {
-        switch self {
-        case .unsupportedExpression(let token):
-            return "An unsupported expression was encountered beginning with: '\(token.lexeme)'"
-        case .unsupportedPrimary(let token):
-            return "An unsupported primary expression was encountered beginning with: '\(token.lexeme)'"
-            
-        case .unrecognizedBooleanLiteral(_, let value):
-            return "Failed to recognize the boolean literal expression: '\(value)'"
-        case .unrecognizedNumberLiteral(_, let value):
-            return "Failed to recognize the number literal expression: '\(value)'"
-        case .unrecognizedStringLiteral(_, let value):
-            return "Failed to recognize the string literal expression: '\(value)'"
-        case .unrecognizedVariable(_, let value):
-            return "Failed to recognize the variable expression: '\(value)'"
-            
-        case .unexpectedGroupOpen(let token, let expected):
-            return "Expected '\(expected)' when opening a group expression but received: '\(token.lexeme)'"
-        case .unexpectedGroupClose(let token, let expected):
-            return "Expected '\(expected)' when closing a group expression but received: '\(token.lexeme)'"
-
-        case .unexpectedListOpen(let token, let expected):
-            return "Expected '\(expected)' when opening a list expression but received: '\(token.lexeme)'"
-        case .unexpectedListNext(let token, let expected):
-            return "Expected '\(expected)' when extending a list expression but received: '\(token.lexeme)'"
-        case .unexpectedListClose(let token, let expected):
-            return "Expected '\(expected)' when closing a list expression but received: '\(token.lexeme)'"
-            
-        case .unexpectedBinaryOperator(let token, let expected):
-            return "Expected '\(expected)' when forming a binary expression but received: '\(token.lexeme)'"
-        case .unexpectedUnaryOperator(let token, let expected):
-            return "Expected '\(expected)' when forming a unary expression but received: '\(token.lexeme)'"
-        }
-    }
 }
