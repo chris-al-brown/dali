@@ -166,19 +166,39 @@ import Foundation
 public final class Parser {
     
     public enum Error: Swift.Error {
-        case unexpectedToken(Token, Token.Lexeme)
-        case unrecognizedExpression(Token)
+        case unexpectedToken(Token, Grammar, [AST.Expression], Token.Lexeme?)
+        
+        public var location: Token.Location {
+            switch self {
+            case .unexpectedToken(let token, _, _, _):
+                return token.location
+            }
+        }
+
+        public var expressions: [AST.Expression] {
+            switch self {
+            case .unexpectedToken(_, _, let value, _):
+                return value
+            }
+        }
     }
-    
-    public enum Result {
-        case success([AST.Statement])
-        case failure([Error])
+
+    public enum Grammar {
+        case boolean
+        case number
+        case string
+        case variable
+        case group
+        case list
+        case primary
+        case binary
+        case unary
+        case expression
     }
- 
+
     public init(_ tokens: [Token]) {
         self.tokens = tokens
-        self.statements = []
-        self.errors = []
+        self.expressions = []
         self.currentIndex = tokens.startIndex
     }
     
@@ -193,102 +213,105 @@ public final class Parser {
         return current.lexeme.isEqual(to:lexeme, withStrictEquality:true)
     }
 
-    private func consume(_ lexeme: Token.Lexeme) -> Token? {
-        if isFinished { return nil }
-        if check(lexeme) {
+    private func consume(_ lexeme: Token.Lexeme, throw error: Parser.Error) throws -> Token {
+        if !isFinished && check(lexeme) {
             return advance()
         }
-        
-        /// ERROR: Reading characters until hit character or end of stream
-        errors.append(.unexpectedToken(current, lexeme))
-        
-        while !check(lexeme) && !isFinished {
-            let _ = advance()
-        }
-        
-        return advance()
+        throw error
+//        throw Error.unexpectedToken(current, grammar, expressions, lexeme)
     }
     
-    private func handleBlankLine() {
-        let _ = consume(.eol)
-    }
+//    private func consume(_ lexeme: Token.Lexeme, grammar: Grammar) throws -> Token {
+//        if !isFinished && check(lexeme) {
+//            return advance()
+//        }
+//        throw Error.unexpectedToken(current, grammar, expressions, lexeme)
+//    }
     
-    private func handleComment(_ value: String) {
-        let _ = consume(.hash(value))
-        let _ = consume(.eol)
-    }
-    
-    private func handleStatement() {
-        if let statement = parseExpression() {
-            statements.append(statement)
-        } else {
-            errors.append(.unrecognizedExpression(current))
-        }
-        let _ = consume(.eol)
-    }
-
-    public func parse() -> Result {
+    public func parse() throws -> [AST.Expression] {
         reset()
         while !isFinished {
             switch current.lexeme {
+            /// Blank lines
             case .eol:
-                handleBlankLine()
+                let _ = try consume(.eol, grammar:.expression)
+            /// Comments
             case .hash(let value):
-                handleComment(value)
+                let _ = try consume(.hash(value), grammar:.expression)
+            /// Everything else
             default:
-                handleStatement()
+                expressions.append(try parseExpression())
+                let _ = try consume(.eol, grammar:.expression)
             }
         }
-        return errors.isEmpty ? .success(statements) : .failure(errors)
+        return expressions
     }
     
-    private func parseBoolean(_ value: Bool) -> AST.Expression {
-        let _ = consume(.boolean(value))
+    private func parseBoolean(_ value: Bool) throws -> AST.Expression {
+        let _ = try consume(.boolean(value), grammar:.boolean)
         return .boolean(value)
     }
     
-    private func parseNumber(_ value: Double) -> AST.Expression {
-        let _ = consume(.number(value))
+    private func parseNumber(_ value: Double) throws -> AST.Expression {
+        let _ = try consume(.number(value), grammar:.number)
         return .number(value)
     }
     
-    private func parseString(_ value: String) -> AST.Expression {
-        let _ = consume(.string(value))
+    private func parseString(_ value: String) throws -> AST.Expression {
+        let _ = try consume(.string(value), grammar:.string)
         return .string(value)
     }
 
-    private func parseVariable(_ value: AST.Identifier) -> AST.Expression? {
-        let _ = consume(.identifier(value))
+    private func parseVariable(_ value: AST.Identifier) throws -> AST.Expression {
+        let _ = try consume(.identifier(value), grammar:.variable)
         return .variable(value)
     }
 
-    private func parseGroup(_ open: Token.Lexeme, _ close: Token.Lexeme) -> AST.Expression? {
-        let _ = consume(open)
-        guard let result = parseExpression() else { return nil }
-        let _ = consume(close)
+    private func parseGroup(_ open: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
+        let _ = try consume(open, grammar:.group)
+        let result = try parseExpression()
+        let _ = try consume(close, grammar:.group)
         return result
     }
 
-    private func parseList(_ open: Token.Lexeme, _ close: Token.Lexeme) -> AST.Expression? {
-        let _ = consume(open)
+    private func parseList(_ open: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
+        let _ = try consume(open, grammar:.list)
         var elements: [AST.Expression] = []
         while !check(close) {
-            if let expression = parseExpression() {
-                elements.append(expression)
-            } else {
-                return nil
-            }
+            elements.append(try parseExpression())
             if check(.comma) {
-                let _ = consume(.comma)
-            } else {
-                break
+                let _ = try consume(.comma, grammar:.list)
             }
         }
-        let _ = consume(close)
+        let _ = try consume(close, grammar:.list)
         return .list(elements)
     }
     
-    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) -> AST.Expression? {
+    private func parsePrimary() throws -> AST.Expression {
+        switch current.lexeme {
+        case .boolean(let value):
+            return try parseBoolean(value)
+        case .number(let value):
+            return try parseNumber(value)
+        case .identifier(let value):
+            return try parseVariable(value)
+        case .string(let value):
+            return try parseString(value)
+        case .parenLeft:
+            return try parseGroup(.parenLeft, .parenRight)
+        case .squareLeft:
+            return try parseList(.squareLeft, .squareRight)
+        default:
+            throw Error.unexpectedToken(current, .primary, expressions, nil)
+        }
+    }
+
+    private func parseExpression() throws -> AST.Expression {
+        let result = try parseUnaryOperator()
+        return try parseBinaryOperator(result)
+    }
+    
+    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
             guard let binary = AST.BinaryOperator(current.lexeme) else {
@@ -297,71 +320,36 @@ public final class Parser {
             if binary.precedence < precedence {
                 return lhs
             }
-            var rhs: AST.Expression? = nil
+            var rhs: AST.Expression
             switch binary {
             case .get:
-                rhs = parseGroup(.squareLeft, .squareRight)
+                rhs = try parseGroup(.squareLeft, .squareRight)
             case .call:
-                rhs = parseList(.parenLeft, .parenRight)
+                rhs = try parseList(.parenLeft, .parenRight)
             default:
-                let _ = consume(binary.lexeme)
-                rhs = parseUnaryOperator()
+                let _ = try consume(binary.lexeme, grammar:.binary)
+                rhs = try parseUnaryOperator()
             }
-            if rhs == nil { return nil }
             let nextBinary = AST.BinaryOperator(current.lexeme)
             let nextPrecedence = nextBinary?.precedence ?? -1
             if precedence < nextPrecedence {
-                rhs = parseBinaryOperator(rhs!, precedence + 1)
-                if rhs == nil {
-                    return nil
-                }
+                rhs = try parseBinaryOperator(rhs, precedence + 1)
             }
-            lhs = .binary(lhs, binary, rhs!)
+            lhs = .binary(lhs, binary, rhs)
         }
     }
     
-    private func parseUnaryOperator() -> AST.Expression? {
+    private func parseUnaryOperator() throws -> AST.Expression {
         guard let unary = AST.UnaryOperator(current.lexeme) else {
-            return parsePrimary()
+            return try parsePrimary()
         }
-        let _ = consume(unary.lexeme)
-        if let rhs = parseUnaryOperator() {
-            return .unary(unary, rhs)
-        }
-        return nil
-    }
-    
-    private func parseExpression() -> AST.Expression? {
-        guard let result = parseUnaryOperator() else {
-            return nil
-        }
-        return parseBinaryOperator(result)
-    }
-    
-    private func parsePrimary() -> AST.Expression? {
-        switch current.lexeme {
-        case .boolean(let value):
-            return parseBoolean(value)
-        case .number(let value):
-            return parseNumber(value)
-        case .identifier(let value):
-            return parseVariable(value)
-        case .string(let value):
-            return parseString(value)
-        case .parenLeft:
-            return parseGroup(.parenLeft, .parenRight)
-        case .squareLeft:
-            return parseList(.squareLeft, .squareRight)
-        default:
-            /// ERROR: Failed to parse primary
-            return nil
-        }
+        let _ = try consume(unary.lexeme, grammar:.unary)
+        return .unary(unary, try parseUnaryOperator())
     }
     
     private func reset() {
-        self.statements = []
-        self.errors = []
-        self.currentIndex = tokens.startIndex
+        expressions.removeAll(keepingCapacity:true)
+        currentIndex = tokens.startIndex
     }
     
     private var current: Token {
@@ -373,8 +361,7 @@ public final class Parser {
     }
 
     private let tokens: [Token]
-    private var statements: [AST.Statement]
-    private var errors: [Error]
+    private var expressions: [AST.Expression]
     private var currentIndex: Int
 }
 
@@ -382,10 +369,12 @@ extension Parser.Error: CustomStringConvertible {
     
     public var description: String {
         switch self {
-        case .unexpectedToken(let token, let expected):
-            return "\(token.location) ERROR: Expected '\(expected)' but instead received: '\(token.lexeme)'"
-        case .unrecognizedExpression(let token):
-            return "\(token.location) ERROR: Failed to parse expression near: '\(token.lexeme)'"
+        case .unexpectedToken(let token, let grammar, _, let expected):
+            if let expected = expected {
+                return "Expected to see '\(expected)' but instead received: '\(token.lexeme)'"
+            } else {
+                return "An unexpected \(grammar) token was encountered: '\(token.lexeme)'"
+            }
         }
     }
 }

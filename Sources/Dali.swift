@@ -75,23 +75,16 @@ public struct Dali {
     
     /// Compile a program from a source string
     public static func compile(source: String) {
-        let scanner = Scanner(source)
         do {
+            let scanner = Scanner(source)
             let tokens = try scanner.scan()
-            log(tokens)
-            
-            /// TODO[Begin]: Clean
             let parser = Parser(tokens)
-            switch parser.parse() {
-            case .success(let expressions):
-                expressions.forEach { expression in print(expression) }
-            case .failure(let errors):
-                errors.forEach { error in print(error) }
-            }
-            /// TODO[End]: Clean
-            
+            let expressions = try parser.parse()
+            log(expressions)
         } catch let scanError as Scanner.Error {
             error(scanError)
+        } catch let parseError as Parser.Error {
+            error(parseError)
         } catch _ {
             fatalError()
         }
@@ -101,6 +94,27 @@ public struct Dali {
         log(string, color:.red, terminator:terminator)
     }
 
+    public static func error(_ issue: Parser.Error) {
+        log(issue.expressions, terminator:"")
+        
+        
+        
+        
+        
+        /// TODO: Start here...
+        
+        
+        
+        
+        
+        
+//        log(issue.remainder, color:.red)
+//        log(infoLine, color:.red)
+        
+        log(issue.expressions)
+        log("\(issue.location) ParserError: \(issue.description)", color:.red, terminator:"\n")
+    }
+    
     public static func error(_ issue: Scanner.Error) {
         let tokenCount = issue.tokens.reduce("") { $0 + " " + $1.lexeme.description }.unicodeScalars.count
         let finalCount = issue.remainder.unicodeScalars.count
@@ -109,7 +123,7 @@ public struct Dali {
         log(issue.tokens, terminator:"")
         log(issue.remainder, color:.red)
         log(infoLine, color:.red)
-        log("\(issue.location) ScannerError: \(issue.description)", color:.red, terminator:"\n\n")
+        log("\(issue.location) ScannerError: \(issue.description)", color:.red, terminator:"\n")
     }
     
     /// Exit a running program
@@ -130,8 +144,13 @@ public struct Dali {
         print(color.apply(string), separator:"", terminator:terminator)
     }
     
+    public static func log(_ expressions: [AST.Expression], terminator: String = "\n") {
+        for expression in expressions {
+            log("AST.Expression: \(expression)")
+        }
+    }
+    
     public static func log(_ tokens: [Token], terminator: String = "\n") {
-        log("")
         for token in tokens {
             let lexeme = token.lexeme
             switch lexeme {
@@ -157,10 +176,9 @@ public struct Dali {
             case .string(_):
                 log(lexeme.description, color:.magenta, terminator:" ")
                 
+            /// Identifiers & Keywords
             case .identifier(_):
                 log(lexeme.description, color:.cyan, terminator:" ")
-                
-            /// Keywords (green)
                 
             /// Newlines
             case .eol, .eos:
@@ -172,11 +190,11 @@ public struct Dali {
     
     /// Read-Eval-Print Loop
     public static func repl() -> Never {
-        log("-------------------------------------", color:.white)
-        log(" dali REPL v0.1.0 (press ^C to exit) ", color:.white)
-        log("-------------------------------------", color:.white)
+        log("-------------------------------------")
+        log(" dali REPL v0.1.0 (press ^C to exit) ")
+        log("-------------------------------------")
         while true {
-            log(">>>", color:.white, terminator:" ")
+            log(">>>", terminator:" ")
             guard let input = readLine(strippingNewline:false) else { continue }
             compile(source:input)
         }

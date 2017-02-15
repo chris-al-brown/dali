@@ -164,8 +164,6 @@ public struct AST {
     }
     
     public typealias Identifier = String
-
-    public typealias Statement = Expression
     
     public enum UnaryOperator {
         case positive           /// +

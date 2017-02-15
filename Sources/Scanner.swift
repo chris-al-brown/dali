@@ -151,10 +151,10 @@ public final class Scanner {
     }
     
     private func reset() {
-        self.tokens = []
-        self.start = source.unicodeScalars.startIndex
-        self.current = source.unicodeScalars.startIndex
-        self.line = 1
+        tokens.removeAll(keepingCapacity:true)
+        start = source.unicodeScalars.startIndex
+        current = source.unicodeScalars.startIndex
+        line = 1
     }
     
     public func scan() throws -> [Token] {
@@ -241,7 +241,8 @@ public final class Scanner {
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
-                append(lexeme:.hash(String(source.unicodeScalars[start..<current])))
+                let index = source.unicodeScalars.index(after:start)
+                append(lexeme:.hash(String(source.unicodeScalars[index..<current])))
                 
             /// Literals (string)
             case "\"":
