@@ -29,6 +29,24 @@ import Foundation
 
 public struct Source: BidirectionalCollection {
     
+    /// ANSI colors for pretty printing
+    public enum Color: String {
+        case black      = "\u{001B}[0;30m"
+        case red        = "\u{001B}[0;31m"
+        case green      = "\u{001B}[0;32m"
+        case yellow     = "\u{001B}[0;33m"
+        case blue       = "\u{001B}[0;34m"
+        case magenta    = "\u{001B}[0;35m"
+        case cyan       = "\u{001B}[0;36m"
+        case white      = "\u{001B}[0;37m"
+        
+        public func apply(_ item: Any) -> String {
+            return "\(rawValue)\(item)\u{001B}[0;0m"
+        }
+    }
+    
+    public typealias Index = String.UnicodeScalarIndex
+
     public enum Input: CustomStringConvertible {
         case file(String)
         case stdin
@@ -43,69 +61,23 @@ public struct Source: BidirectionalCollection {
         }
     }
     
-    public typealias Index = String.UnicodeScalarIndex
-    
-    public struct Location {
-        
-        public init(_ range: Range<Index>) {
-            self.range = range
-        }
-        
-        fileprivate let range: Range<Index>
-    }
+    public typealias Location = Range<Index>
 
     public typealias Scalar = UnicodeScalar
     
-    public init(_ input: Input, _ storage: String) {
+    public init(input: Input, source: String, supportsColor: Bool) {
         self.input = input
-        self.storage = storage
+        self.storage = source
+        self.supportsColor = supportsColor
     }
 
     public subscript(position: Index) -> Scalar {
         return storage.unicodeScalars[position]
     }
     
-    public subscript(location: Location) -> String {
-        return String(storage.unicodeScalars[location.range])
-    }
-    
-    
-    
-    
-    
-    public func format(error description: String, for location: Location) -> String {
-        let row = line(for:location)
-        let col = columns(for:location)
-        var output = ""
-        if col.count == 1 {
-            output += "file: \(input), line: \(row), column: \(col.lowerBound)" + "\n"
-        } else {
-            output += "file: \(input), line: \(row), columns: \(col.lowerBound)-\(col.upperBound)" + "\n"
-        }
-        output += context(for:location) + "\n"
-        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
-        output += description
-        return output
-    }
-
-    private func context(for location: Location) -> String {
-        var sindex = location.range.lowerBound
-        while self[sindex] != "\n" && sindex != startIndex {
-            sindex = index(before:sindex)
-        }
-        var eindex = location.range.upperBound
-        while self[eindex] != "\n" && eindex != endIndex {
-            eindex = index(after:eindex)
-        }
-        if sindex < eindex && self[sindex] == "\n" {
-            sindex = index(after:sindex)
-        }
-        return String(storage.unicodeScalars[sindex..<eindex])
-    }
-
-    private func columns(for location: Location) -> ClosedRange<Int> {
-        var currentIndex = location.range.lowerBound
-        /// Fixes eol to be at end of a line and not at the beginning of the next
+    public func columns(for location: Location) -> ClosedRange<Int> {
+        var currentIndex = location.lowerBound
+        /// Fix for eol to be at end of a line
         if self[currentIndex] == "\n" && currentIndex != startIndex {
             currentIndex = index(before:currentIndex)
         }
@@ -114,15 +86,116 @@ public struct Source: BidirectionalCollection {
         }
         /// Fix for the first line that needs to be shifted by one
         let offset = currentIndex == startIndex ? 1 : 0
-        let column = distance(from:currentIndex, to:location.range.lowerBound) + offset
-        let length = distance(from:location.range.lowerBound, to:location.range.upperBound)
+        let column = distance(from:currentIndex, to:location.lowerBound) + offset
+        let length = distance(from:location.lowerBound, to:location.upperBound)
         return column...(column + length - 1)
     }
 
-    private func line(for location: Location) -> Int {
+    public func extract(_ location: Location) -> String {
+        return String(storage.unicodeScalars[location])
+    }
+    
+    public func extractLine(_ location: Location) -> String {
+        var sindex = location.lowerBound
+        while self[sindex] != "\n" && sindex != startIndex {
+            sindex = index(before:sindex)
+        }
+        var eindex = location.upperBound
+        while self[eindex] != "\n" && eindex != endIndex {
+            eindex = index(after:eindex)
+        }
+        if sindex < eindex && self[sindex] == "\n" {
+            sindex = index(after:sindex)
+        }
+        return String(storage.unicodeScalars[sindex..<eindex])
+    }
+    
+    /// Format a source string based on the parsed tokens it contains
+    
+    //    public static func log(_ tokens: [Token], terminator: String = "\n") {
+    //        for token in tokens {
+    //            let lexeme = token.lexeme
+    //            switch lexeme {
+    //            /// Punctuation
+    //            case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
+    //                log(lexeme.description, terminator:" ")
+    //
+    //            /// Operators
+    //            case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
+    //                log(lexeme.description, color:.green, terminator:" ")
+    //
+    //            /// Hash
+    //            case .hash:
+    //                log(lexeme.description, color:.black, terminator:" ")
+    //
+    //            /// Literals
+    //            case .boolean(_):
+    //                log(lexeme.description, color:.yellow, terminator:" ")
+    //
+    //            case .number(_):
+    //                log(lexeme.description, color:.blue, terminator:" ")
+    //
+    //            case .string(_):
+    //                log(lexeme.description, color:.magenta, terminator:" ")
+    //
+    //            /// Identifiers & Keywords
+    //            case .identifier(_):
+    //                log(lexeme.description, color:.cyan, terminator:" ")
+    //
+    //            /// Newlines
+    //            case .eol:
+    //                log(lexeme.description, color:.black)
+    //            }
+    //        }
+    //        log("", terminator:terminator)
+    //    }
+
+    public func format(error message: String, using tokens: [Token], at location: Location) -> String {
+        var lineStartIndex = location.lowerBound
+        while self[lineStartIndex] != "\n" && lineStartIndex != startIndex {
+            lineStartIndex = index(before:lineStartIndex)
+        }
+        var truncatedSource = extract(startIndex..<lineStartIndex)
+        if supportsColor {
+            let colors: [Token.Category: Color] = [
+                .boolean: .yellow,
+                .comment: .black,
+                .keyword: .cyan,
+                .number: .blue,
+                .operator: .green,
+                .string: .magenta,
+                .variable: .cyan
+            ]
+            for token in tokens.reversed() {
+                let location = token.location
+                if location.upperBound <= truncatedSource.unicodeScalars.endIndex {
+                    let category = token.lexeme.category
+                    let substring = truncatedSource.unicodeScalars[location]
+                    if let color = colors[category] {
+                        truncatedSource.unicodeScalars.replaceSubrange(location, with:color.apply(substring).unicodeScalars)
+                    }
+                }
+            }
+        }
+        return truncatedSource + "\n" + format(error:message, at:location)
+    }
+    
+    public func format(error message: String, at location: Location) -> String {
+        let row = line(for:location)
+        let col = columns(for:location)
+        var output = ""
+        output += "file: \(input), line: \(row), "
+        output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
+        output += extractLine(location) + "\n"
+        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
+        output += message
+        return supportsColor ? Color.red.apply(output) : output
+    }
+
+    public func line(for location: Location) -> Int {
         var line = 1
         var currentIndex = startIndex
-        while currentIndex != location.range.lowerBound && currentIndex != endIndex {
+        while currentIndex != location.lowerBound && currentIndex != endIndex {
             if self[currentIndex] == "\n" {
                 line += 1
             }
@@ -130,10 +203,6 @@ public struct Source: BidirectionalCollection {
         }
         return line
     }
-    
-    
-    
-    
     
     public func index(after i: Index) -> Index {
         return storage.unicodeScalars.index(after:i)
@@ -153,4 +222,5 @@ public struct Source: BidirectionalCollection {
     
     private let input: Input
     private let storage: String
+    private let supportsColor: Bool
 }

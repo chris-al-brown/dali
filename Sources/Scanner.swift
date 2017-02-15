@@ -83,7 +83,7 @@ public final class Scanner {
     }
     
     private func locate() -> Source.Location {
-        return Source.Location(start..<current)
+        return start..<current
     }
     
     private func peek() -> Source.Scalar {
@@ -137,7 +137,7 @@ public final class Scanner {
                     let _ = advance()
                 }
                 /// Attempt numeric conversion
-                if let value = Double(source[locate()]) {
+                if let value = Double(source.extract(locate())) {
                     append(lexeme:.number(value))
                 } else {
                     // Failed numeric conversion error
@@ -189,8 +189,7 @@ public final class Scanner {
                     let _ = advance()
                 }
                 let index = source.index(after:start)
-                let location = Source.Location(index..<current)
-                append(lexeme:.hash(source[location]))
+                append(lexeme:.hash(source.extract(index..<current)))
                 
             /// Literals (string)
             case "\"":
@@ -206,8 +205,7 @@ public final class Scanner {
                     // Trim the surrounding quotes
                     let lower = source.index(after:start)
                     let upper = source.index(before:current)
-                    let location = Source.Location(lower..<upper)
-                    append(lexeme:.string(source[location]))
+                    append(lexeme:.string(source.extract(lower..<upper)))
                 } else {
                     // Unterminated string error
                     throw Error.unterminatedString(locate())
@@ -232,7 +230,7 @@ public final class Scanner {
                         }
                     }
                     /// Attempt numeric conversion
-                    if let value = Double(String(source[locate()])) {
+                    if let value = Double(String(source.extract(locate()))) {
                         append(lexeme:.number(value))
                     } else {
                         // Failed numeric conversion error
@@ -245,7 +243,7 @@ public final class Scanner {
                         let _ = advance()
                     }
                     /// Not exactly sure why this is optional?
-                    let value = String(source[locate()]).unsafelyUnwrapped
+                    let value = String(source.extract(locate())).unsafelyUnwrapped
                     if let keyword = Token.Lexeme.keywords[value] {
                         append(lexeme:keyword)
                     } else {

@@ -29,9 +29,6 @@
         variable: true
         variable: false
 
-        # A nonexistent value
-        variable: none
-
     # Compositions
 
         # A record (i.e. hash, map, dictionary, etc.)

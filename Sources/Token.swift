@@ -29,6 +29,18 @@ import Foundation
 
 public struct Token {
     
+    public enum Category {
+        case boolean
+        case comment
+        case keyword
+        case number
+        case `operator`
+        case punctuation
+        case string
+        case variable
+        case whitespace
+    }
+    
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
@@ -70,11 +82,6 @@ public struct Token {
         
         /// End of line
         case eol                    /// eol
-        
-        public static var keywords: [String: Lexeme] = [
-            "true": .boolean(true),
-            "false": .boolean(false)
-        ]
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
@@ -128,6 +135,32 @@ public struct Token {
                 return true
             default:
                 return false
+            }
+        }
+        
+        public static var keywords: [String: Lexeme] = [
+            "true": .boolean(true),
+            "false": .boolean(false)
+        ]
+        
+        public var category: Category {
+            switch self {
+                case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
+                    return .punctuation
+                case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
+                    return .operator
+                case .hash:
+                    return .comment
+                case .boolean(_):
+                    return .boolean
+                case .number(_):
+                    return .number
+                case .string(_):
+                    return .string
+                case .identifier(_):
+                    return .variable
+                case .eol:
+                    return .whitespace
             }
         }
     }
