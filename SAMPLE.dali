@@ -29,11 +29,8 @@
         variable: true
         variable: false
 
-        # A nonexistent value
-        variable: none
-
     # Compositions
-
+    	
         # A record (i.e. hash, map, dictionary, etc.)
         person: { name: "Chris", address: "101 Rivera Boulevard" }
         person[name]

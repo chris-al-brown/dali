@@ -29,6 +29,18 @@ import Foundation
 
 public struct Token {
     
+    public enum Category {
+        case boolean
+        case comment
+        case keyword
+        case number
+        case `operator`
+        case punctuation
+        case string
+        case variable
+        case whitespace
+    }
+    
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
@@ -69,12 +81,7 @@ public struct Token {
         case identifier(String)     /// my_variable
         
         /// End of line
-        case eol                    /// eol
-        
-        public static var keywords: [String: Lexeme] = [
-            "true": .boolean(true),
-            "false": .boolean(false)
-        ]
+        case end                    /// end
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
@@ -124,10 +131,36 @@ public struct Token {
                 return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
                 return lvalue == rvalue
-            case (.eol, .eol):
+            case (.end, .end):
                 return true
             default:
                 return false
+            }
+        }
+        
+        public static var keywords: [String: Lexeme] = [
+            "true": .boolean(true),
+            "false": .boolean(false)
+        ]
+        
+        public var category: Category {
+            switch self {
+                case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
+                    return .punctuation
+                case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
+                    return .operator
+                case .hash:
+                    return .comment
+                case .boolean(_):
+                    return .boolean
+                case .number(_):
+                    return .number
+                case .string(_):
+                    return .string
+                case .identifier(_):
+                    return .variable
+                case .end:
+                    return .whitespace
             }
         }
     }
@@ -191,8 +224,8 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .identifier(let value):
             return "\(value)"
-        case .eol:
-            return "EOL"
+        case .end:
+            return "END"
         }
     }
 }
