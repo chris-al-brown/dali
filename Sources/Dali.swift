@@ -95,34 +95,20 @@ public struct Dali {
     }
 
     public static func error(_ issue: Parser.Error) {
-        log(issue.expressions, terminator:"")
+//        log(issue.expressions)
+//        log("\(issue.location) ParserError: \(issue.description)", color:.red, terminator:"\n")
         
-        
-        
-        
-        
-        /// TODO: Start here...
-        
-        
-        
-        
-        
-        
-//        log(issue.remainder, color:.red)
-//        log(infoLine, color:.red)
-        
-        log(issue.expressions)
         log("\(issue.location) ParserError: \(issue.description)", color:.red, terminator:"\n")
     }
     
     public static func error(_ issue: Scanner.Error) {
         let tokenCount = issue.tokens.reduce("") { $0 + " " + $1.lexeme.description }.unicodeScalars.count
         let finalCount = issue.remainder.unicodeScalars.count
-        let infoLine = String(repeatElement("-", count:tokenCount)) + String(repeatElement("^", count:finalCount + 1))
+        let issueHighlight = String(repeatElement("-", count:tokenCount)) + String(repeatElement("^", count:finalCount + 1))
         
         log(issue.tokens, terminator:"")
         log(issue.remainder, color:.red)
-        log(infoLine, color:.red)
+        log(issueHighlight, color:.red)
         log("\(issue.location) ScannerError: \(issue.description)", color:.red, terminator:"\n")
     }
     
