@@ -144,6 +144,9 @@ public struct AST {
         /// false
         case boolean(Bool)
 
+        /// { (first, second) | first + second }
+        case function([Identifier], [Expression])
+        
         /// [x + 1, y + 1, z + 1]
         case list([Expression])
 
@@ -160,7 +163,7 @@ public struct AST {
         case unary(UnaryOperator, Expression)
 
         /// my_variable
-        case variable(Identifier)
+        case variable(Variable)
     }
     
     public typealias Identifier = String
@@ -194,4 +197,6 @@ public struct AST {
             }
         }
     }
+
+    public typealias Variable = String
 }
