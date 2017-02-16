@@ -4,7 +4,7 @@
 # unused characters: @ . $ % ^ & ' ; ?
 # control flow: lazy sequences and predicates
 # type system: static typing with an optional type
-# supported types: boolean, number, string, sequence, record, function
+# supported types: boolean, number, string, list, map, function
 # drawing output: stdin, stdout, stderr, stdcvs (standard canvas)
 # how to deal with function lookup, name mangling, multiple dispatch
 # support for subclassing and variable lookup chains
@@ -26,23 +26,25 @@
         single: "This is a single line string."
 
         # A boolean value
-        variable: true
-        variable: false
+        variable: true  # false
 
     # Compositions
     	
-        # A record (i.e. hash, map, dictionary, etc.)
+        # A map (i.e. hash, dictionary, record, etc.)
         person: { name: "Chris", address: "101 Rivera Boulevard" }
         person[name]
         person[address]: "102 Rivera Boulevard"
 
-        # A sequence (i.e. array, list, etc.)
+        # A list (i.e. array, etc.)
         numbers: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
         numbers[0]
         numbers[3]: numbers[3] + 10.0
 
         booleans: [true, false, true, false]
         booleans[3]
+
+	mixed: [false, 1.0, "Hello world"]
+	mixed[0]: 0.0
 
 # Operators
 

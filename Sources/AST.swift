@@ -144,8 +144,11 @@ public struct AST {
         /// false
         case boolean(Bool)
 
-        /// [x: x + 1, y: y + 1]
+        /// [x + 1, y + 1, z + 1]
         case list([Expression])
+
+        /// [name: "Chris", age: 15]
+        case map([Identifier: Expression])
 
         /// 1.512
         case number(Double)

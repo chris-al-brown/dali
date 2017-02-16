@@ -211,16 +211,18 @@ public final class Parser {
         reset()
         while !isFinished {
             switch current.lexeme {
-            /// Blank lines
+            /// Blank line or EOL
             case .end:
                 let _ = try consume(.end)
-            /// Comments
+            /// Multiple expressions on same line
+            case .comma:
+                let _ = try consume(.comma)
+            /// Comment full or partial line
             case .hash(let value):
                 let _ = try consume(.hash(value))
             /// Everything else
             default:
                 expressions.append(try parseExpression())
-                let _ = try consume(.end)
             }
         }
         return expressions
@@ -266,6 +268,26 @@ public final class Parser {
         return .list(elements)
     }
     
+    private func parseMap(_ open: Token.Lexeme, _ separator: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
+        let _ = try consume(open)
+        var elements: [AST.Identifier: AST.Expression] = [:]
+        while !check(close) {
+            switch current.lexeme {
+            case .identifier(let key):
+                let _ = try parseVariable(key)
+                let _ = try consume(.colon)
+                elements[key] = try parseExpression()
+            default:
+                throw Error.unexpectedToken(current)
+            }
+            if check(separator) {
+                let _ = try consume(separator)
+            }
+        }
+        let _ = try consume(close)
+        return .map(elements)
+    }
+    
     private func parsePrimary() throws -> AST.Expression {
         switch current.lexeme {
         case .boolean(let value):
@@ -280,6 +302,8 @@ public final class Parser {
             return try parseGroup(.parenLeft, .parenRight)
         case .squareLeft:
             return try parseList(.squareLeft, .comma, .squareRight)
+        case .curlyLeft:
+            return try parseMap(.curlyLeft, .comma, .curlyRight)
         default:
             throw Error.unexpectedToken(current)
         }
