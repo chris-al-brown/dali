@@ -80,6 +80,9 @@ public struct Token {
         /// Identifier
         case identifier(String)     /// my_variable
         
+        /// Keywords
+        case reserved(String)       /// this, pi, e, etc.
+        
         /// End of line
         case end                    /// end
         
@@ -131,6 +134,8 @@ public struct Token {
                 return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
                 return lvalue == rvalue
+            case (.reserved(let lvalue), .reserved(let rvalue)):
+                return lvalue == rvalue
             case (.end, .end):
                 return true
             default:
@@ -140,27 +145,31 @@ public struct Token {
         
         public static var keywords: [String: Lexeme] = [
             "true": .boolean(true),
-            "false": .boolean(false)
+            "false": .boolean(false),
+            "e": .reserved("e"),
+            "pi": .reserved("pi")
         ]
         
         public var category: Category {
             switch self {
-                case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
-                    return .punctuation
-                case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
-                    return .operator
-                case .hash:
-                    return .comment
-                case .boolean(_):
-                    return .boolean
-                case .number(_):
-                    return .number
-                case .string(_):
-                    return .string
-                case .identifier(_):
-                    return .variable
-                case .end:
-                    return .whitespace
+            case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
+                return .punctuation
+            case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
+                return .operator
+            case .hash:
+                return .comment
+            case .boolean(_):
+                return .boolean
+            case .number(_):
+                return .number
+            case .string(_):
+                return .string
+            case .identifier(_):
+                return .variable
+            case .reserved(_):
+                return .keyword
+            case .end:
+                return .whitespace
             }
         }
     }
@@ -223,6 +232,8 @@ extension Token.Lexeme: CustomStringConvertible {
         case .boolean(let value):
             return "\(value)"
         case .identifier(let value):
+            return "\(value)"
+        case .reserved(let value):
             return "\(value)"
         case .end:
             return "END"

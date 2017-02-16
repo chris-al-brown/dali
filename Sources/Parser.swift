@@ -151,8 +151,13 @@ public final class Parser {
         return .string(value)
     }
 
-    private func parseVariable(_ value: AST.Identifier) throws -> AST.Expression {
+    private func parseIdentifier(_ value: AST.Identifier) throws -> AST.Expression {
         let _ = try consume(.identifier(value))
+        return .variable(value)
+    }
+
+    private func parseReserved(_ value: AST.Identifier) throws -> AST.Expression {
+        let _ = try consume(.reserved(value))
         return .variable(value)
     }
 
@@ -182,7 +187,7 @@ public final class Parser {
         while !check(.curlyRight) {
             switch current.lexeme {
             case .identifier(let key):
-                let _ = try parseVariable(key)
+                let _ = try parseIdentifier(key)
                 let _ = try consume(.colon)
                 elements[key] = try parseExpression()
             default:
@@ -230,13 +235,16 @@ public final class Parser {
     }
 
     private func parsePrimary() throws -> AST.Expression {
-        switch current.lexeme {
+        let lexeme = current.lexeme
+        switch lexeme {
         case .boolean(let value):
             return try parseBoolean(value)
         case .number(let value):
             return try parseNumber(value)
         case .identifier(let value):
-            return try parseVariable(value)
+            return try parseIdentifier(value)
+        case .reserved(let value):
+            return try parseReserved(value)
         case .string(let value):
             return try parseString(value)
         case .parenLeft:
@@ -306,7 +314,7 @@ public final class Parser {
         while !check(.parenRight) {
             switch current.lexeme {
             case .identifier(let key):
-                let _ = try parseVariable(key)
+                let _ = try parseIdentifier(key)
                 let _ = try consume(.colon)
                 keywords[key] = try parseExpression()
             default:
