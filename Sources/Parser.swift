@@ -25,107 +25,53 @@
 // Used to convert tokens into an AST
 // -----------------------------------------------------------------------------
 
-/**
- 
- -------------------
- Parser EBNF grammar
- -------------------
-
- ? : 0 or 1 occurances
- * : 0 or > occurances
- + : 1 or > occurances
- 
- -------------------
- 
- program        = statement* eos
- 
- statement      = expression ',' expression
-                | expression eol
- 
- expression     = binary
-                | unary
-                | group
-                | literal
- 
- binary         = expression '[' index ']'
-                | expression '(' keywords? ')'
-                | expression (':' | '+' | '-' | '*' | '/' | '=' | '<' | '>' | '&' | '|' ) expression
-
- index          = boolean
-                | number
-                | string
-                | variable
-
- keywords       = identifier ':' expression ( ',' identifier ':' expression )*
- 
- unary          = ( '!' | '+' | '-' ) expression
-
- group          = '(' expression ')'
- 
- literal        = boolean
-                | function
-                | list
-                | map
-                | number
-                | string
-                | variable
- 
- boolean        = 'true' | 'false'
- 
- function       = '(' arguments? ')' '{' expression* '}'
-
- arguments      = identifier ( ',' identifier )*
- 
- list           = '[' elements? ']'
- 
- elements       = expression ( ',' expression )*
- 
- map            = '{' keywords? '}'
- 
- number         = digit+ ( '.' digit+ )?
- 
- string         = '"' ^( '"' | eol )* '"'
- 
- identifier     = alpha ( alpha | digit )*
- 
- alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
- 
- digit          = '0' ... '9'
- 
- eol            = '\n'
- 
- eos            = <end of stream>
-
- **/
-
-
 import Foundation
 
 public final class Parser {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case unexpectedEndOfStream(Token)
-        case unexpectedFunctionArgument(Token)
-        case unexpectedToken(Token)
+        case unexpectedFunctionArgumentName(Token)
+        case unexpectedMapKey(Token)
+        case unexpectedMapOrFunction(Token, Token.Lexeme)
+        case unexpectedStreamEnd(Token)
+        case unexpectedToken(Token, Token.Lexeme)
+        case unexpectedTrailingToken(Token, Token.Lexeme)
+        case unsupportedExpression(Token)
 
         public var description: String {
             switch self {
-            case .unexpectedEndOfStream(let token):
-                return "Encountered a premature end to the token stream: '\(token.lexeme)'"
-            case .unexpectedFunctionArgument(let token):
-                return "Encountered an unexpected function argument: '\(token.lexeme)'"
-            case .unexpectedToken(let token):
-                return "Encountered an unexpected token: '\(token.lexeme)'"
+            case .unexpectedFunctionArgumentName(let token):
+                return "Expected a valid function argument name but received '\(token.lexeme)'."
+            case .unexpectedMapKey(let token):
+                return "Expected a valid map key but received '\(token.lexeme)'."
+            case .unexpectedMapOrFunction(let token, let adjacent):
+                return "Expected a map literal or function definition but received '\(token.lexeme)\(adjacent)'."
+            case .unexpectedStreamEnd(let token):
+                return "Token stream ended prematurely near: '\(token.lexeme)'."
+            case .unexpectedToken(let token, let expected):
+                return "Expected '\(expected)' but received '\(token.lexeme)'."
+            case .unexpectedTrailingToken(let token, let other):
+                return "Trailing '\(token.lexeme)' before '\(other)'."
+            case .unsupportedExpression(let token):
+                return "Unsupported expression at '\(token.lexeme)'."
             }
         }
 
         public var location: Source.Location {
             switch self {
-            case .unexpectedEndOfStream(let token):
+            case .unexpectedFunctionArgumentName(let token):
                 return token.location
-            case .unexpectedFunctionArgument(let token):
+            case .unexpectedMapKey(let token):
                 return token.location
-            case .unexpectedToken(let token):
+            case .unexpectedMapOrFunction(let token, _):
+                return token.location
+            case .unexpectedStreamEnd(let token):
+                return token.location
+            case .unexpectedToken(let token, _):
+                return token.location
+            case .unexpectedTrailingToken(let token, _):
+                return token.location
+            case .unsupportedExpression(let token):
                 return token.location
             }
         }
@@ -157,7 +103,16 @@ public final class Parser {
         if !isFinishedCurrent && check(lexeme) {
             return advance()
         }
-        throw Error.unexpectedToken(current)
+        throw Error.unexpectedToken(current, lexeme)
+    }
+    
+    private func consume(_ lexeme: Token.Lexeme, notFollowedBy other: Token.Lexeme) throws -> Token {
+        let token = current
+        let _ = try consume(lexeme)
+        if check(other) {
+            throw Error.unexpectedTrailingToken(token, other)
+        }
+        return token
     }
     
     public func parse() throws -> [AST.Expression] {
@@ -180,7 +135,7 @@ public final class Parser {
         }
         return expressions
     }
-    
+        
     private func parseBoolean(_ value: Bool) throws -> AST.Expression {
         let _ = try consume(.boolean(value))
         return .boolean(value)
@@ -214,7 +169,7 @@ public final class Parser {
         while !check(.squareRight) {
             elements.append(try parseExpression())
             if check(.comma) {
-                let _ = try consume(.comma)
+                let _ = try consume(.comma, notFollowedBy:.squareRight)
             }
         }
         let _ = try consume(.squareRight)
@@ -231,10 +186,10 @@ public final class Parser {
                 let _ = try consume(.colon)
                 elements[key] = try parseExpression()
             default:
-                throw Error.unexpectedToken(current)
+                throw Error.unexpectedMapKey(current)
             }
             if check(.comma) {
-                let _ = try consume(.comma)
+                let _ = try consume(.comma, notFollowedBy:.curlyRight)
             }
         }
         let _ = try consume(.curlyRight)
@@ -252,10 +207,10 @@ public final class Parser {
                 let _ = try consume(.identifier(name))
                 args.append(name)
             default:
-                throw Error.unexpectedFunctionArgument(current)
+                throw Error.unexpectedFunctionArgumentName(current)
             }
             if check(.comma) {
-                let _ = try consume(.comma)
+                let _ = try consume(.comma, notFollowedBy:.parenRight)
             }
         }
         let _ = try consume(.parenRight)
@@ -291,7 +246,7 @@ public final class Parser {
         case .curlyLeft:
             /// Look ahead one token
             if isFinishedNext {
-                throw Error.unexpectedEndOfStream(current)
+                throw Error.unexpectedStreamEnd(current)
             }
             switch next.lexeme {
             /// '{' '(' => function
@@ -304,10 +259,10 @@ public final class Parser {
             case .curlyRight:
                 return try parseMap()
             default:
-                throw Error.unexpectedToken(next)
+                throw Error.unexpectedMapOrFunction(current, next.lexeme)
             }
         default:
-            throw Error.unexpectedToken(current)
+            throw Error.unsupportedExpression(current)
         }
     }
     
@@ -347,15 +302,22 @@ public final class Parser {
     /// TODO: Include keyword arguments here (a.k.a map-like)
     private func parseCallOperatorArguments() throws -> AST.Expression {
         let _ = try consume(.parenLeft)
-        var elements: [AST.Expression] = []
+        var keywords: [AST.Identifier: AST.Expression] = [:]
         while !check(.parenRight) {
-            elements.append(try parseExpression())
+            switch current.lexeme {
+            case .identifier(let key):
+                let _ = try parseVariable(key)
+                let _ = try consume(.colon)
+                keywords[key] = try parseExpression()
+            default:
+                throw Error.unexpectedFunctionArgumentName(current)
+            }
             if check(.comma) {
-                let _ = try consume(.comma)
+                let _ = try consume(.comma, notFollowedBy:.parenRight)
             }
         }
         let _ = try consume(.parenRight)
-        return .list(elements)
+        return .map(keywords)
     }
 
     /// TODO: Restrict to just variable lookup and not full expressions

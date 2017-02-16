@@ -13,6 +13,7 @@
     <a href="#installation">Installation</a>
     <a href="#usage">Usage</a>
     <a href="#references">References</a>
+    <a href="#language">Language</a>
     <a href="#license">License</a>
 </p>
 
@@ -30,6 +31,71 @@ dali is a ...
 ## Installation
 
 ## Usage
+
+## Language
+
+The grammar of the language is given by the following EBNF grammar:
+
+```
+ program        = statement* eos
+ 
+ statement      = expression ',' expression
+                | expression eol
+ 
+ expression     = binary
+                | unary
+                | group
+                | literal
+ 
+ binary         = expression '[' expression ']'
+                | expression '(' keywords? ')'
+                | expression (':' | '+' | '-' | '*' | '/' | '=' | '<' | '>' | '&' | '|' ) expression
+
+ keywords       = identifier ':' expression ( ',' identifier ':' expression )*
+ 
+ unary          = ( '!' | '+' | '-' ) expression
+
+ group          = '(' expression ')'
+ 
+ literal        = boolean
+                | function
+                | list
+                | map
+                | number
+                | string
+                | variable
+ 
+ boolean        = 'true' | 'false'
+ 
+ function       = '{' '(' arguments? ')' '|' expression* '}'
+
+ arguments      = identifier ( ',' identifier )*
+ 
+ list           = '[' elements? ']'
+ 
+ elements       = expression ( ',' expression )*
+ 
+ map            = '{' keywords? '}'
+ 
+ number         = digit+ ( '.' digit+ )?
+ 
+ string         = '"' ^( '"' | eol )* '"'
+ 
+ identifier     = alpha ( alpha | digit )*
+ 
+ alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
+ 
+ digit          = '0' ... '9'
+ 
+ eol            = '\n'
+ 
+ eos            = <end of stream>
+
+ ?              = <0 | 1>
+ *              = <0 | 1 | 2 | ... >
+ +              = <1 | 2 | 3 | ... >
+
+```
 
 ## References
 
