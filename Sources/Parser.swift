@@ -26,6 +26,7 @@
 // -----------------------------------------------------------------------------
 
 /**
+ 
  -------------------
  Parser EBNF grammar
  -------------------
@@ -38,138 +39,81 @@
  
  program        = statement* eos
  
- statement      = expression eol
+ statement      = expression ',' expression
+                | expression eol
  
- -------TODO--------
+ expression     = binary
+                | unary
+                | group
+                | literal
  
- expression     = identifier
-                | identifier ':' expression
-                | call
-                | call ':' expression
- 
- call           = primary argument*
- 
- primary        = boolean
+ binary         = expression '[' index ']'
+                | expression '(' keywords? ')'
+                | expression (':' | '+' | '-' | '*' | '/' | '=' | '<' | '>' | '&' | '|' ) expression
+
+ index          = boolean
                 | number
                 | string
-                | identifier
-                | '(' expression ')'
- 
- argument       = ( '(' parameters? ')' | '[' identifier ']' )
- parameters     = expression ( "," expression )* ;
+                | variable
 
- expression     = identifier
-                | identifier ':' expression
-                | call '[' identifier ']'
-                | call '[' identifier ']' ':' expression
- 
- call           = primary argument*
- 
- primary        = boolean
-                | number
-                | string
-                | identifier
-                | '(' expression ')'
- 
- argument       = ( '(' parameters? ')' | '[' identifier ']' )
- parameters     = expression ( "," expression )* ;
-
- -------TODO--------
-
- or             = and ( '|' and )*
- and            = equality ( '&' equality )*
- equality       = comparison ( '=' comparison )*
- comparison     = arithmetic ( ( ">" | "<" ) arithmetic )*
- arithmetic     = multiplicative ( ( "-" | "+" ) multiplicative )*
- multiplicative = prefix ( ( "/" | "*" ) prefix )*
- prefix         = ( "!" | "-" ) prefix | call
- 
- boolean        = 'true' | 'false'
- number         = digit+ ( '.' digit* )? | '.' digit+
- string         = '"' <not eol and not '"'>* '"'
- identifier     = alpha ( alpha | digit )*
- alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
- digit          = '0' ... '9'
- eol            = '\n'
- eos            = <end of stream token>
-
- -------------------
-
- record         = '{' keywords? '}'
  keywords       = identifier ':' expression ( ',' identifier ':' expression )*
  
+ unary          = ( '!' | '+' | '-' ) expression
+
+ group          = '(' expression ')'
+ 
+ literal        = boolean
+                | function
+                | list
+                | map
+                | number
+                | string
+                | variable
+ 
+ boolean        = 'true' | 'false'
+ 
+ function       = '(' arguments? ')' '{' expression* '}'
+
+ arguments      = identifier ( ',' identifier )*
+ 
  list           = '[' elements? ']'
+ 
  elements       = expression ( ',' expression )*
  
- function       = '(' parameters? ')' '{' expression* '}'
- parameters     = identifier ( ',' identifier )*
+ map            = '{' keywords? '}'
  
- -------------------
+ number         = digit+ ( '.' digit+ )?
  
-    TODO: super.
-
-    program    = declaration* eof ;
-
-    declaration = classDecl
-                | funDecl
-                | varDecl
-                | statement ;
-
-    statement   = exprStmt
-                | forStmt
-                | ifStmt
-                | returnStmt
-                | whileStmt
-                | block ;
-
-    classDecl   = "class" identifier ( "<" identifier )? "{" function* "}" ;
-    funDecl     = "fun" function ;
-    varDecl     = "var" identifier ( "=" expression )? ";" ;
-
-    exprStmt    = expression ";" ;
-    forStmt     = "for" "(" ( varDecl | exprStmt ) expression? ";" expression? ")"
-                  statement ;
-    ifStmt      = "if" "(" expression ")" statement ( "else" statement )? ;
-    returnStmt  = "return" expression? ";" ;
-    whileStmt   = "while" "(" expression ")" statement ;
-
-    block       = "{" declaration* "}" ;
-    function    = identifier "(" parameters? ")" block ;
-    parameters  = identifier ( "," identifier )* ;
-
-    expression  = assignment ;
-    assignment  = ( call "." )? identifier ( "=" assignment )? ;
-    or          = and ( "or" and )* ;
-    and         = equality ( "and" equality )* ;
-    equality    = comparison ( ( "!=" | "==" ) comparison )* ;
-    comparison  = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-    term        = factor ( ( "-" | "+" ) factor )* ;
-    factor      = unary ( ( "/" | "*" ) unary )* ;
-    unary       = ( "!" | "-" ) unary | call ;
-    call        = primary ( "(" arguments? ")" | "." identifier )* ;
-    primary     = "true" | "false" | "null" | "this"
-                | number | string | identifier | "(" expression ")" ;
-
-    arguments   = expression ( "," expression )* ;
-
-    number      = digit+ ( "." digit* )? | "." digit+ ;
-    string      = '"' <any char except '"'>* '"' ;
-    identifier  = alpha ( alpha | digit )* ;
-    alpha       = 'a' ... 'z' | 'A' ... 'Z' | '_' ;
-    digit       = '0' ... '9' ;
-    eof         = <special token indicating end of input>
+ string         = '"' ^( '"' | eol )* '"'
  
+ identifier     = alpha ( alpha | digit )*
+ 
+ alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
+ 
+ digit          = '0' ... '9'
+ 
+ eol            = '\n'
+ 
+ eos            = <end of stream>
+
  **/
+
 
 import Foundation
 
 public final class Parser {
     
     public enum Error: Swift.Error, CustomStringConvertible {
+        case unexpectedEndOfStream(Token)
+        case unexpectedFunctionArgument(Token)
         case unexpectedToken(Token)
 
         public var description: String {
             switch self {
+            case .unexpectedEndOfStream(let token):
+                return "Encountered a premature end to the token stream: '\(token.lexeme)'"
+            case .unexpectedFunctionArgument(let token):
+                return "Encountered an unexpected function argument: '\(token.lexeme)'"
             case .unexpectedToken(let token):
                 return "Encountered an unexpected token: '\(token.lexeme)'"
             }
@@ -177,6 +121,10 @@ public final class Parser {
 
         public var location: Source.Location {
             switch self {
+            case .unexpectedEndOfStream(let token):
+                return token.location
+            case .unexpectedFunctionArgument(let token):
+                return token.location
             case .unexpectedToken(let token):
                 return token.location
             }
@@ -196,12 +144,17 @@ public final class Parser {
     }
 
     private func check(_ lexeme: Token.Lexeme) -> Bool {
-        if isFinished { return false }
+        if isFinishedCurrent { return false }
         return current.lexeme == lexeme
+    }
+    
+    private func checkNext(_ lexeme: Token.Lexeme) -> Bool {
+        if isFinishedNext { return false }
+        return next.lexeme == lexeme
     }
 
     private func consume(_ lexeme: Token.Lexeme) throws -> Token {
-        if !isFinished && check(lexeme) {
+        if !isFinishedCurrent && check(lexeme) {
             return advance()
         }
         throw Error.unexpectedToken(current)
@@ -209,12 +162,12 @@ public final class Parser {
     
     public func parse() throws -> [AST.Expression] {
         reset()
-        while !isFinished {
+        while !isFinishedCurrent {
             switch current.lexeme {
             /// Blank line or EOL
             case .end:
                 let _ = try consume(.end)
-            /// Multiple expressions on same line
+            /// Multiple statements
             case .comma:
                 let _ = try consume(.comma)
             /// Comment full or partial line
@@ -248,30 +201,30 @@ public final class Parser {
         return .variable(value)
     }
 
-    private func parseGroup(_ open: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
-        let _ = try consume(open)
+    private func parseGroup() throws -> AST.Expression {
+        let _ = try consume(.parenLeft)
         let result = try parseExpression()
-        let _ = try consume(close)
+        let _ = try consume(.parenRight)
         return result
     }
 
-    private func parseList(_ open: Token.Lexeme, _ separator: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
-        let _ = try consume(open)
+    private func parseList() throws -> AST.Expression {
+        let _ = try consume(.squareLeft)
         var elements: [AST.Expression] = []
-        while !check(close) {
+        while !check(.squareRight) {
             elements.append(try parseExpression())
-            if check(separator) {
-                let _ = try consume(separator)
+            if check(.comma) {
+                let _ = try consume(.comma)
             }
         }
-        let _ = try consume(close)
+        let _ = try consume(.squareRight)
         return .list(elements)
     }
     
-    private func parseMap(_ open: Token.Lexeme, _ separator: Token.Lexeme, _ close: Token.Lexeme) throws -> AST.Expression {
-        let _ = try consume(open)
+    private func parseMap() throws -> AST.Expression {
+        let _ = try consume(.curlyLeft)
         var elements: [AST.Identifier: AST.Expression] = [:]
-        while !check(close) {
+        while !check(.curlyRight) {
             switch current.lexeme {
             case .identifier(let key):
                 let _ = try parseVariable(key)
@@ -280,14 +233,47 @@ public final class Parser {
             default:
                 throw Error.unexpectedToken(current)
             }
-            if check(separator) {
-                let _ = try consume(separator)
+            if check(.comma) {
+                let _ = try consume(.comma)
             }
         }
-        let _ = try consume(close)
+        let _ = try consume(.curlyRight)
         return .map(elements)
     }
     
+    private func parseFunction() throws -> AST.Expression {
+        let _ = try consume(.curlyLeft)
+        let _ = try consume(.parenLeft)
+        /// Args
+        var args: [AST.Identifier] = []
+        while !check(.parenRight) {
+            switch current.lexeme {
+            case .identifier(let name):
+                let _ = try consume(.identifier(name))
+                args.append(name)
+            default:
+                throw Error.unexpectedFunctionArgument(current)
+            }
+            if check(.comma) {
+                let _ = try consume(.comma)
+            }
+        }
+        let _ = try consume(.parenRight)
+        let _ = try consume(.bar)
+        /// Body
+        var body: [AST.Expression] = []
+        while !check(.curlyRight) {
+            body.append(try parseExpression())
+            if check(.comma) {
+                let _ = try consume(.comma)
+            } else if check(.end) {
+                let _ = try consume(.end)
+            }
+        }
+        let _ = try consume(.curlyRight)
+        return .function(args, body)
+    }
+
     private func parsePrimary() throws -> AST.Expression {
         switch current.lexeme {
         case .boolean(let value):
@@ -299,16 +285,32 @@ public final class Parser {
         case .string(let value):
             return try parseString(value)
         case .parenLeft:
-            return try parseGroup(.parenLeft, .parenRight)
+            return try parseGroup()
         case .squareLeft:
-            return try parseList(.squareLeft, .comma, .squareRight)
+            return try parseList()
         case .curlyLeft:
-            return try parseMap(.curlyLeft, .comma, .curlyRight)
+            /// Look ahead one token
+            if isFinishedNext {
+                throw Error.unexpectedEndOfStream(current)
+            }
+            switch next.lexeme {
+            /// '{' '(' => function
+            case .parenLeft:
+                return try parseFunction()
+            /// '{' 'identifier' => map
+            case .identifier(_):
+                return try parseMap()
+            /// '{' '}' => empty map
+            case .curlyRight:
+                return try parseMap()
+            default:
+                throw Error.unexpectedToken(next)
+            }
         default:
             throw Error.unexpectedToken(current)
         }
     }
-
+    
     private func parseExpression() throws -> AST.Expression {
         let result = try parseUnaryOperator()
         return try parseBinaryOperator(result)
@@ -326,9 +328,9 @@ public final class Parser {
             var rhs: AST.Expression
             switch binary {
             case .get:
-                rhs = try parseGroup(.squareLeft, .squareRight)
+                rhs = try parseGetOperatorArguments()
             case .call:
-                rhs = try parseList(.parenLeft, .comma, .parenRight)
+                rhs = try parseCallOperatorArguments()
             default:
                 let _ = try consume(binary.lexeme)
                 rhs = try parseUnaryOperator()
@@ -340,6 +342,28 @@ public final class Parser {
             }
             lhs = .binary(lhs, binary, rhs)
         }
+    }
+    
+    /// TODO: Include keyword arguments here (a.k.a map-like)
+    private func parseCallOperatorArguments() throws -> AST.Expression {
+        let _ = try consume(.parenLeft)
+        var elements: [AST.Expression] = []
+        while !check(.parenRight) {
+            elements.append(try parseExpression())
+            if check(.comma) {
+                let _ = try consume(.comma)
+            }
+        }
+        let _ = try consume(.parenRight)
+        return .list(elements)
+    }
+
+    /// TODO: Restrict to just variable lookup and not full expressions
+    private func parseGetOperatorArguments() throws -> AST.Expression {
+        let _ = try consume(.squareLeft)
+        let result = try parseExpression()
+        let _ = try consume(.squareRight)
+        return result
     }
     
     private func parseUnaryOperator() throws -> AST.Expression {
@@ -358,9 +382,17 @@ public final class Parser {
     private var current: Token {
         return tokens[currentIndex]
     }
-    
-    private var isFinished: Bool {
+
+    private var isFinishedCurrent: Bool {
         return currentIndex >= tokens.endIndex
+    }
+    
+    private var isFinishedNext: Bool {
+        return currentIndex + 1 >= tokens.endIndex
+    }
+
+    private var next: Token {
+        return tokens[currentIndex + 1]
     }
 
     private let tokens: [Token]

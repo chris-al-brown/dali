@@ -10,7 +10,6 @@
 # support for subclassing and variable lookup chains
 # support for optional and none values
 
-
 # Comments
 
     # This is a comment because it begins with #
@@ -43,8 +42,8 @@
         booleans: [true, false, true, false]
         booleans[3]
 
-	mixed: [false, 1.0, "Hello world"]
-	mixed[0]: 0.0
+        mixed: [false, 1.0, "Hello world"]
+        mixed[0]: 0.0
 
 # Operators
 
@@ -104,10 +103,10 @@
 # Functions
 
     # Anonymous
-    ( first, second ) { first + second }
+    { (first, second) | first + second }
 
     # Named
-    adder: ( first, second ) { first + second }
+    adder: { (first, second) | first + second }
 
     # Execution
 
@@ -118,10 +117,6 @@
         # Using keyword arguments
         adder(first:1.0, second:2.0)              # 3.0
         adder(first:"Hello ", second:"world")     # "Hello world"
-
-
-
-
 
 # Sketching
 
