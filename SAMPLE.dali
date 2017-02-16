@@ -97,7 +97,7 @@
     first + second
 
     # Multiple
-    first: 1.0, second: .2, third: 3
+    first: 1.0, second: 0.2, third: 3
     first + second + third
 
 # Functions
@@ -109,21 +109,10 @@
     adder: { (first, second) | first + second }
 
     # Execution
-
-        # Using positional arguments
-        adder(1.0, 2.0)
-        adder("Hello ", "world")
-
-        # Using keyword arguments
-        adder(first:1.0, second:2.0)              # 3.0
-        adder(first:"Hello ", second:"world")     # "Hello world"
+    adder(first:1.0, second:2.0)              # 3.0
+    adder(first:"Hello ", second:"world")     # "Hello world"
 
 # Sketching
-
-# Function of a single argument
-( x | !x )
-# Same as a boolean expression
-( x | !x )
 
 # Slices are not supported
 # reduce: { (value:array:) reduce(value:value + array[0], array: array[1:]) }
@@ -137,10 +126,10 @@
 
 # Functional programming primitives: reduce, filter, map
 
-    reduce(from:where:)
-    filter(from:where:)
-    sample(from:where:)
-    sample(from:where:count:)
+# reduce(from:where:)
+# filter(from:where:)
+# sample(from:where:)
+# sample(from:where:count:)
 
 # Context
 
@@ -165,11 +154,11 @@
 
     # Colors
 
-    color(gray:)
-    color(red:green:blue:)
-    color(red:green:blue:alpha:)
-    color(hue:saturation:brightness:)
-    color(hue:saturation:brightness:alpha:)
+    # color(gray:)
+    # color(red:green:blue:)
+    # color(red:green:blue:alpha:)
+    # color(hue:saturation:brightness:)
+    # color(hue:saturation:brightness:alpha:)
 
     # Constant
 
@@ -180,17 +169,17 @@
 
     # Geometry
 
-    point(x:y:)
-    size(width:height:)
-    line(from:to:)
-    line(slope:intercept:)
-    circle(x:y:radius:)
-    circle(origin:radius:)
-    triangle(origin:radius:)
-    triangle(p1:p2:p3:)
-    square(origin:radius:)
-    rectangle(origin:size:)
-    polygon(points:)
+    # point(x:y:)
+    # size(width:height:)
+    # line(from:to:)
+    # line(slope:intercept:)
+    # circle(x:y:radius:)
+    # circle(origin:radius:)
+    # triangle(origin:radius:)
+    # triangle(p1:p2:p3:)
+    # square(origin:radius:)
+    # rectangle(origin:size:)
+    # polygon(points:)
 
     # Isometry
 
@@ -218,29 +207,29 @@
 
     # Measurement
 
-    area(of:)
-    distance(from:to:)
-    distance(from:to:metric:)
-    length(of:)
+    # area(of:)
+    # distance(from:to:)
+    # distance(from:to:metric:)
+    # length(of:)
 
     # Noise
 
-    perlin(x)
-    perlin(x:y:)
-    perlin(x:y:z:)
+    # perlin(x)
+    # perlin(x:y:)
+    # perlin(x:y:z:)
     # simplex(x)
     # simplex(x:y:)
     # simplex(x:y:z:)
 
     # Random
 
-    random()
-    gaussian(mean:stddev:)
-    uniform(min:max:)
+    # random()
+    # gaussian(mean:stddev:)
+    # uniform(min:max:)
 
     # Series
 
-    range(from:to:)
+    # range(from:to:)
     # arithmetic
     # fourier
     # geometric

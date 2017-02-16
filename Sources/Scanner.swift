@@ -130,20 +130,6 @@ public final class Scanner {
                 append(lexeme:.colon)
             case ",":
                 append(lexeme:.comma)
-                
-            case ".":
-                /// Literals (number) without integer parts (e.g. .125)
-                while isDigit(peek()) {
-                    let _ = advance()
-                }
-                /// Attempt numeric conversion
-                if let value = Double(source.extract(locate())) {
-                    append(lexeme:.number(value))
-                } else {
-                    // Failed numeric conversion error
-                    throw Error.unsupportedNumericFormat(locate())
-                }
-                
             case "{":
                 append(lexeme:.curlyLeft)
             case "}":
@@ -220,15 +206,22 @@ public final class Scanner {
                     while isDigit(peek()) {
                         let _ = advance()
                     }
-                    /// Check for a decimal part
-                    if peek() == "." && isDigit(peekNext()) {
-                        /// Absorb the "."
-                        let _ = advance()
-                        /// Absorb the decimal part
-                        while isDigit(peek()) {
+                    /// Check for decimal part
+                    if peek() == "." {
+                        if isDigit(peekNext()) {
+                            /// Absorb the "."
                             let _ = advance()
+                            /// Absorb the decimal part
+                            while isDigit(peek()) {
+                                let _ = advance()
+                            }
+                        } else {
+                            /// Absorb the "."
+                            let _ = advance()
+                            throw Error.unsupportedNumericFormat(locate())
                         }
                     }
+                    
                     /// Attempt numeric conversion
                     if let value = Double(String(source.extract(locate()))) {
                         append(lexeme:.number(value))

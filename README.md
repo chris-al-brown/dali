@@ -67,7 +67,7 @@ The grammar of the language is given by the following EBNF grammar:
  
  boolean        = 'true' | 'false'
  
- function       = '(' arguments? ')' '{' expression* '}'
+ function       = '{' '(' arguments? ')' '|' expression* '}'
 
  arguments      = identifier ( ',' identifier )*
  
