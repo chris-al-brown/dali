@@ -80,8 +80,12 @@ The grammar of the language is given by the following EBNF grammar:
  number         = digit+ ( '.' digit+ )?
  
  string         = '"' ^( '"' | eol )* '"'
- 
+
+ variable       = identifier | reserved
+
  identifier     = alpha ( alpha | digit )*
+
+ reserved       = 'pi' | 'π' | 'e' | '𝜀'
  
  alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
  

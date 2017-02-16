@@ -124,7 +124,7 @@ public struct Source: BidirectionalCollection {
             let colors: [Token.Category: Color] = [
                 .boolean: .yellow,
                 .comment: .black,
-                .keyword: .cyan,
+                .keyword: .yellow,
                 .number: .blue,
                 .operator: .green,
                 .string: .magenta,
