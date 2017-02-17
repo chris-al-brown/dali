@@ -43,7 +43,7 @@ public struct Dali {
                 let parser = Parser(tokens)
                 let expressions = try parser.parse()
                 for expression in expressions {
-                    print(expression)
+                    log(pretty(expression))
                 }
             } catch let issue as Parser.Error {
                 error(source, tokens, issue)
@@ -81,6 +81,41 @@ public struct Dali {
     public static func log(_ string: String, terminator: String = "\n") {
         print(string, separator:"", terminator:terminator)
     }
+    
+    
+    /// DEBUG
+    
+    public static func pretty(_ expression: AST.Expression) -> String {
+        switch expression {
+        case .binary(let lhs, let op, let rhs):
+            switch op {
+            case .get:
+                return "\(pretty(lhs))[\(pretty(rhs))]"
+            case .call:
+                return "\(pretty(lhs))(\(pretty(rhs)))"
+            default:
+                return "(\(op.lexeme) \(pretty(lhs)) \(pretty(rhs)))"
+            }
+        case .boolean(let value):
+            return value.description
+        case .function(_, _):
+            return ""
+        case .list(_):
+            return ""
+        case .map(_):
+            return ""
+        case .number(let value):
+            return value.description
+        case .string(let value):
+            return value
+        case .unary(let op, let rhs):
+            return "(\(op.lexeme) \(pretty(rhs))"
+        case .variable(let value):
+            return value
+        }
+    }
+    
+    /// DEBUG
     
     /// Read-Eval-Print Loop
     public static func repl(supportsColor: Bool) -> Never {

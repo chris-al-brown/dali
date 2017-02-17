@@ -156,9 +156,9 @@ public final class Parser {
         return .variable(value)
     }
 
-    private func parseReserved(_ value: AST.Identifier) throws -> AST.Expression {
-        let _ = try consume(.reserved(value))
-        return .variable(value)
+    private func parseKeyword(_ value: AST.Keyword) throws -> AST.Expression {
+        let _ = try consume(.keyword(value))
+        return .variable(value.rawValue)
     }
 
     private func parseGroup() throws -> AST.Expression {
@@ -243,8 +243,8 @@ public final class Parser {
             return try parseNumber(value)
         case .identifier(let value):
             return try parseIdentifier(value)
-        case .reserved(let value):
-            return try parseReserved(value)
+        case .keyword(let value):
+            return try parseKeyword(value)
         case .string(let value):
             return try parseString(value)
         case .parenLeft:
@@ -279,15 +279,33 @@ public final class Parser {
         return try parseBinaryOperator(result)
     }
     
+    /**
+     
+        cur = tokenizer.cur_token
+        if (cur is None or cur.name != 'BINOP' or OPINFO_MAP[cur.value].prec < min_prec): break
+     
+        # Get the operator's precedence and associativity, and compute a
+        # minimal precedence for the recursive call
+        op = cur.value
+        prec, assoc = OPINFO_MAP[op]
+        next_min_prec = prec + 1 if assoc == 'LEFT' else prec
+
+        # Consume the current token and prepare the next one for the
+        # recursive call
+        tokenizer.get_next_token()
+        atom_rhs = compute_expr(tokenizer, next_min_prec)
+
+        # Update lhs with the new value
+        atom_lhs = compute_op(op, atom_lhs, atom_rhs)
+
+     **/
+    
     private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
-            guard let binary = AST.BinaryOperator(current.lexeme) else {
-                return lhs
-            }
-            if binary.precedence < precedence {
-                return lhs
-            }
+            guard let binary = AST.BinaryOperator(current.lexeme) else { return lhs }
+            if binary.precedence < precedence { return lhs }
+            
             var rhs: AST.Expression
             switch binary {
             case .get:
@@ -301,13 +319,13 @@ public final class Parser {
             let nextBinary = AST.BinaryOperator(current.lexeme)
             let nextPrecedence = nextBinary?.precedence ?? -1
             if precedence < nextPrecedence {
-                rhs = try parseBinaryOperator(rhs, precedence + 1)
+                rhs = try parseBinaryOperator(rhs, binary.associativity == .left ? precedence + 1 : precedence)
+//                rhs = try parseBinaryOperator(rhs, precedence + 1)
             }
             lhs = .binary(lhs, binary, rhs)
         }
     }
     
-    /// TODO: Include keyword arguments here (a.k.a map-like)
     private func parseCallOperatorArguments() throws -> AST.Expression {
         let _ = try consume(.parenLeft)
         var keywords: [AST.Identifier: AST.Expression] = [:]
@@ -328,7 +346,6 @@ public final class Parser {
         return .map(keywords)
     }
 
-    /// TODO: Restrict to just variable lookup and not full expressions
     private func parseGetOperatorArguments() throws -> AST.Expression {
         let _ = try consume(.squareLeft)
         let result = try parseExpression()

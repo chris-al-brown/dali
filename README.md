@@ -37,27 +37,27 @@ dali is a ...
 The grammar of the language is given by the following EBNF grammar:
 
 ```
- program        = statement* eos
+ program        → statement* eos
  
- statement      = expression ',' expression
+ statement      → expression ',' expression
                 | expression eol
  
- expression     = binary
+ expression     → binary
                 | unary
                 | group
                 | literal
  
- binary         = expression '[' expression ']'
+ binary         → expression '[' expression ']'
                 | expression '(' keywords? ')'
                 | expression (':' | '+' | '-' | '*' | '/' | '=' | '<' | '>' | '&' | '|' ) expression
 
- keywords       = identifier ':' expression ( ',' identifier ':' expression )*
+ keywords       → identifier ':' expression ( ',' identifier ':' expression )*
  
- unary          = ( '!' | '+' | '-' ) expression
+ unary          → ( '!' | '+' | '-' ) expression
 
- group          = '(' expression ')'
+ group          → '(' expression ')'
  
- literal        = boolean
+ literal        → boolean
                 | function
                 | list
                 | map
@@ -65,39 +65,35 @@ The grammar of the language is given by the following EBNF grammar:
                 | string
                 | variable
  
- boolean        = 'true' | 'false'
+ boolean        → 'true' | 'false'
  
- function       = '{' '(' arguments? ')' '|' expression* '}'
+ function       → '{' '(' arguments? ')' '|' expression* '}'
 
- arguments      = identifier ( ',' identifier )*
+ arguments      → identifier ( ',' identifier )*
  
- list           = '[' elements? ']'
+ list           → '[' elements? ']'
  
- elements       = expression ( ',' expression )*
+ elements       → expression ( ',' expression )*
  
- map            = '{' keywords? '}'
+ map            → '{' keywords? '}'
  
- number         = digit+ ( '.' digit+ )?
+ number         → digit+ ( '.' digit+ )?
  
- string         = '"' ^( '"' | eol )* '"'
+ string         → '"' ^( '"' | eol )* '"'
 
- variable       = identifier | reserved
+ variable       → identifier | reserved
 
- identifier     = alpha ( alpha | digit )*
+ identifier     → alpha ( alpha | digit )*
 
- reserved       = 'pi' | 'π' | 'e' | '𝜀'
+ keyword        → 'pi' | 'e'
  
- alpha          = 'a' ... 'z' | 'A' ... 'Z' | '_'
+ alpha          → 'a' ... 'z' | 'A' ... 'Z' | '_'
  
- digit          = '0' ... '9'
+ digit          → '0' ... '9'
  
- eol            = '\n'
+ eol            → '\n'
  
- eos            = <end of stream>
-
- ?              = <0 | 1>
- *              = <0 | 1 | 2 | ... >
- +              = <1 | 2 | 3 | ... >
+ eos            → <end of stream>
 
 ```
 
@@ -116,6 +112,8 @@ The grammar of the language is given by the following EBNF grammar:
 6. [Extended Bachus-Naur form](https://en.wikipedia.org/wiki/Extended_Backus–Naur_form)
 
 7. [ANSI Escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code)
+
+8. [Parsing expressions by precedence climbing](http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing)
 
 ## License
 
