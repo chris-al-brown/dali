@@ -30,6 +30,12 @@ import Foundation
 public struct AST {
 
     public enum BinaryOperator {
+        
+        public enum Associativity {
+            case left
+            case right
+        }
+        
         case get                /// [ ]
         case set                /// :
         case call               /// ( )
@@ -74,6 +80,35 @@ public struct AST {
                 self = .or
             default:
                 return nil
+            }
+        }
+        
+        public var associativity: Associativity {
+            switch self {
+            case .get:
+                return .left
+            case .set:
+                return .left
+            case .call:
+                return .left
+            case .add:
+                return .left
+            case .subtract:
+                return .left
+            case .multiply:
+                return .left
+            case .divide:
+                return .left
+            case .equalTo:
+                return .left
+            case .lessThan:
+                return .left
+            case .greaterThan:
+                return .left
+            case .and:
+                return .left
+            case .or:
+                return .left
             }
         }
         
@@ -167,6 +202,8 @@ public struct AST {
     }
     
     public typealias Identifier = String
+    
+    public typealias Keyword = Token.Keyword
     
     public enum UnaryOperator {
         case positive           /// +

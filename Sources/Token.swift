@@ -41,6 +41,11 @@ public struct Token {
         case whitespace
     }
     
+    public enum Keyword: String {
+        case pi = "pi"
+        case e  = "e"
+    }
+    
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
@@ -81,7 +86,7 @@ public struct Token {
         case identifier(String)     /// my_variable
         
         /// Keywords
-        case reserved(String)       /// this, pi, e, etc.
+        case keyword(Keyword)       /// this, pi, e, etc.
         
         /// End of line
         case end                    /// end
@@ -134,7 +139,7 @@ public struct Token {
                 return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
                 return lvalue == rvalue
-            case (.reserved(let lvalue), .reserved(let rvalue)):
+            case (.keyword(let lvalue), .keyword(let rvalue)):
                 return lvalue == rvalue
             case (.end, .end):
                 return true
@@ -146,8 +151,8 @@ public struct Token {
         public static var keywords: [String: Lexeme] = [
             "true": .boolean(true),
             "false": .boolean(false),
-            "e": .reserved("e"),
-            "pi": .reserved("pi")
+            "e": .keyword(.e),
+            "pi": .keyword(.pi)
         ]
         
         public var category: Category {
@@ -166,7 +171,7 @@ public struct Token {
                 return .string
             case .identifier(_):
                 return .variable
-            case .reserved(_):
+            case .keyword(_):
                 return .keyword
             case .end:
                 return .whitespace
@@ -233,10 +238,10 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .identifier(let value):
             return "\(value)"
-        case .reserved(let value):
+        case .keyword(let value):
             return "\(value)"
         case .end:
-            return "END"
+            return "\\n"
         }
     }
 }
