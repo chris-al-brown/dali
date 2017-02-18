@@ -86,33 +86,36 @@ public struct Dali {
     /// DEBUG
     
     public static func pretty(_ expression: AST.Expression) -> String {
-        switch expression {
-        case .binary(let lhs, let op, let rhs):
-            switch op {
-            case .get:
-                return "\(pretty(lhs))[\(pretty(rhs))]"
-            case .call:
-                return "\(pretty(lhs))(\(pretty(rhs)))"
-            default:
-                return "(\(op.lexeme) \(pretty(lhs)) \(pretty(rhs)))"
-            }
-        case .boolean(let value):
-            return value.description
-        case .function(_, _):
-            return ""
-        case .list(_):
-            return ""
-        case .map(_):
-            return ""
-        case .number(let value):
-            return value.description
-        case .string(let value):
-            return value
-        case .unary(let op, let rhs):
-            return "(\(op.lexeme) \(pretty(rhs))"
-        case .variable(let value):
-            return value
-        }
+        return "\(expression)"
+        
+//        switch expression {
+//        case .binary(let lhs, let op, let rhs):
+//            switch op {
+//            case .get:
+//                return "\(pretty(lhs))[\(pretty(rhs))]"
+//            case .call:
+//                return "\(pretty(lhs))(\(pretty(rhs)))"
+//            default:
+//                return "(\(op.lexeme) \(pretty(lhs)) \(pretty(rhs)))"
+//            }
+//        case .boolean(let value):
+//            return value.description
+//        case .function(_, _):
+//            return ""
+//        case .list(_):
+//            return ""
+//        case .map(_):
+//            return ""
+//        case .number(let value):
+//            return value.description
+//        case .string(let value):
+//            return value
+//        case .unary(let op, let rhs):
+//            return "(\(op.lexeme) \(pretty(rhs))"
+//        case .variable(let value):
+//            return value
+//        }
+        
     }
     
     /// DEBUG

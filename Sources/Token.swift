@@ -49,6 +49,7 @@ public struct Token {
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
+        case at                     /// @
         case colon                  /// :
         case comma                  /// ,
         case curlyLeft              /// {
@@ -89,10 +90,15 @@ public struct Token {
         case keyword(Keyword)       /// this, pi, e, etc.
         
         /// End of line
+        case newline                /// newline
+        
+        /// End of stream
         case end                    /// end
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
+            case (.at, .at):
+                return true
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
@@ -141,6 +147,8 @@ public struct Token {
                 return lvalue == rvalue
             case (.keyword(let lvalue), .keyword(let rvalue)):
                 return lvalue == rvalue
+            case (.newline, .newline):
+                return true
             case (.end, .end):
                 return true
             default:
@@ -171,9 +179,9 @@ public struct Token {
                 return .string
             case .identifier(_):
                 return .variable
-            case .keyword(_):
+            case .at, .keyword(_):
                 return .keyword
-            case .end:
+            case .newline, .end:
                 return .whitespace
             }
         }
@@ -192,6 +200,8 @@ extension Token.Lexeme: CustomStringConvertible {
 
     public var description: String {
         switch self {
+        case .at:
+            return "@"
         case .colon:
             return ":"
         case .comma:
@@ -240,8 +250,10 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .keyword(let value):
             return "\(value)"
-        case .end:
+        case .newline:
             return "\\n"
+        case .end:
+            return "END"
         }
     }
 }

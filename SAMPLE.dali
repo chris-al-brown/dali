@@ -1,7 +1,7 @@
 # Dali language specification and code samples
 
 # Notes
-# unused characters: @ . $ % ^ & ' ; ?
+# unused characters: $ % ^ & ' ; ?
 # control flow: lazy sequences and predicates
 # type system: static typing with an optional type
 # supported types: boolean, number, string, list, map, function
@@ -25,17 +25,24 @@
         single: "This is a single line string."
 
         # A boolean value
-        variable: true  # false
+        variable: true
 
     # Compositions
     	
         # A map (i.e. hash, dictionary, record, etc.)
-        person: { name: "Chris", address: "101 Rivera Boulevard" }
+        person: {
+            name: "Chris",
+            age: 34,
+            address: "101 Rivera Boulevard"
+        }
         person[name]
         person[address]: "102 Rivera Boulevard"
 
         # A list (i.e. array, etc.)
-        numbers: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0]
+        numbers: [0.0,
+            2.0, 4.0, 6.0,
+            8.0, 10.0
+        ]
         numbers[0]
         numbers[3]: numbers[3] + 10.0
 
@@ -97,16 +104,18 @@
     first + second
 
     # Multiple
-    first: 1.0, second: 0.2, third: 3
-    first + second + third
+    # first: 1.0, second: 0.2, third: 3
+    # first + second + third
 
 # Functions
 
-    # Anonymous
-    { (first, second) | first + second }
+    # Anonymous (i.e. lambda)
+    @( first, second ) { first + second }
 
     # Named
-    adder: { (first, second) | first + second }
+    adder: @( first, second ) {
+        first + second # Return this
+    }
 
     # Execution
     adder(first:1.0, second:2.0)              # 3.0
@@ -238,5 +247,3 @@
     # Symmetry
 
     # mirror?
-    
-    {,}

@@ -30,53 +30,68 @@ import Foundation
 public final class Parser {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case unexpectedFunctionArgumentName(Token)
-        case unexpectedMapKey(Token)
-        case unexpectedMapOrFunction(Token, Token.Lexeme)
-        case unexpectedStreamEnd(Token)
+        case degenerateKey(Token)
+        case invalidArgumentName(Token)
+        case invalidAssignment(Token)
+        case invalidIndex(Token)
+        case invalidKey(Token)
+        case invalidValue(Token)
+        case prematureStreamEnd(Token)
+        case trailingToken(Token)
         case unexpectedToken(Token, Token.Lexeme)
-        case unexpectedTrailingToken(Token, Token.Lexeme)
-        case unsupportedExpression(Token)
+        case unsupportedPrimary(Token)
 
         public var description: String {
             switch self {
-            case .unexpectedFunctionArgumentName(let token):
-                return "Expected a valid function argument name but received '\(token.lexeme)'."
-            case .unexpectedMapKey(let token):
-                return "Expected a valid map key but received '\(token.lexeme)'."
-            case .unexpectedMapOrFunction(let token, let adjacent):
-                return "Expected a map literal or function definition but received '\(token.lexeme)\(adjacent)'."
-            case .unexpectedStreamEnd(let token):
-                return "Token stream ended prematurely near: '\(token.lexeme)'."
+            case .degenerateKey(let token):
+                return "Degenerate key found: '\(token.lexeme)'"
+            case .invalidArgumentName(let token):
+                return "Invalid argument name: '\(token.lexeme)'"
+            case .invalidAssignment(let token):
+                return "Invalid right-hand assignment: '\(token.lexeme)'"
+            case .invalidIndex(let token):
+                return "Invalid index: '\(token.lexeme)'"
+            case .invalidKey(let token):
+                return "Invalid map key: '\(token.lexeme)'"
+            case .invalidValue(let token):
+                return "Invalid value: '\(token.lexeme)'"
+            case .prematureStreamEnd(let token):
+                return "Token stream ended prematurely: '\(token.lexeme)'"
+            case .trailingToken(let token):
+                return "Trailing '\(token.lexeme)'"
             case .unexpectedToken(let token, let expected):
-                return "Expected '\(expected)' but received '\(token.lexeme)'."
-            case .unexpectedTrailingToken(let token, let other):
-                return "Trailing '\(token.lexeme)' before '\(other)'."
-            case .unsupportedExpression(let token):
-                return "Unsupported expression at '\(token.lexeme)'."
+                return "Expected to see '\(expected)' but found '\(token.lexeme)'"
+            case .unsupportedPrimary(let token):
+                return "Unsupported primary '\(token.lexeme)'."
             }
         }
 
         public var location: Source.Location {
             switch self {
-            case .unexpectedFunctionArgumentName(let token):
+            case .degenerateKey(let token):
                 return token.location
-            case .unexpectedMapKey(let token):
+            case .invalidArgumentName(let token):
                 return token.location
-            case .unexpectedMapOrFunction(let token, _):
+            case .invalidAssignment(let token):
                 return token.location
-            case .unexpectedStreamEnd(let token):
+            case .invalidIndex(let token):
+                return token.location
+            case .invalidKey(let token):
+                return token.location
+            case .invalidValue(let token):
+                return token.location
+            case .prematureStreamEnd(let token):
+                return token.location
+            case .trailingToken(let token):
                 return token.location
             case .unexpectedToken(let token, _):
                 return token.location
-            case .unexpectedTrailingToken(let token, _):
-                return token.location
-            case .unsupportedExpression(let token):
+            case .unsupportedPrimary(let token):
                 return token.location
             }
         }
     }
-
+    
     public init(_ tokens: [Token]) {
         self.tokens = tokens
         self.expressions = []
@@ -88,77 +103,175 @@ public final class Parser {
         currentIndex += 1
         return token
     }
-
+    
     private func check(_ lexeme: Token.Lexeme) -> Bool {
-        if isFinishedCurrent { return false }
+        if isFinished { return false }
         return current.lexeme == lexeme
     }
     
-    private func checkNext(_ lexeme: Token.Lexeme) -> Bool {
-        if isFinishedNext { return false }
-        return next.lexeme == lexeme
-    }
-
-    private func consume(_ lexeme: Token.Lexeme) throws -> Token {
-        if !isFinishedCurrent && check(lexeme) {
-            return advance()
+    private func consume(_ lexeme: Token.Lexeme, strippingCommentsAndNewlines: Bool = true) throws -> Token {
+        if isFinished {
+            throw Error.prematureStreamEnd(current)
+        }
+        if check(lexeme) {
+            let token = advance()
+            if strippingCommentsAndNewlines && !isFinished {
+                switch current.lexeme {
+                /// Ignore trailing comments
+                case .hash(let value):
+                    let _ = try consume(.hash(value), strippingCommentsAndNewlines:false)
+                    let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+                /// Ignore trailing blank lines
+                case .newline:
+                    let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+                default:
+                    break
+                }
+            }
+            return token
         }
         throw Error.unexpectedToken(current, lexeme)
     }
     
-    private func consume(_ lexeme: Token.Lexeme, notFollowedBy other: Token.Lexeme) throws -> Token {
-        let token = current
-        let _ = try consume(lexeme)
-        if check(other) {
-            throw Error.unexpectedTrailingToken(token, other)
-        }
-        return token
-    }
-    
     public func parse() throws -> [AST.Expression] {
         reset()
-        while !isFinishedCurrent {
+        while !isFinished {
             switch current.lexeme {
-            /// Blank line or EOL
-            case .end:
-                let _ = try consume(.end)
-            /// Multiple statements
-            case .comma:
-                let _ = try consume(.comma)
-            /// Comment full or partial line
+            /// Ignore comment lines
             case .hash(let value):
-                let _ = try consume(.hash(value))
-            /// Everything else
+                let _ = try consume(.hash(value), strippingCommentsAndNewlines:false)
+                let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+            /// Ignore blank lines
+            case .newline:
+                let _ = try consume(.newline, strippingCommentsAndNewlines:false)
             default:
                 expressions.append(try parseExpression())
             }
         }
         return expressions
     }
-        
+    
+    private func parseArguments(_ close: Token.Lexeme) throws -> [AST.Identifier] {
+        var arguments: [AST.Identifier] = []
+        while !check(close) {
+            switch current.lexeme {
+            case .identifier(let name):
+                let _ = try consume(.identifier(name))
+                arguments.append(name)
+            default:
+                throw Error.invalidArgumentName(current)
+            }
+            if check(.comma) {
+                let _ = try consume(.comma)
+                if check(close) {
+                    throw Error.trailingToken(current)
+                }
+            }
+        }
+        return arguments
+    }
+
+    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
+        var lhs = lhs
+        while true {
+            guard let binary = AST.BinaryOperator(current.lexeme) else {
+                return lhs
+            }
+            if binary.precedence < precedence {
+                return lhs
+            }
+            let _ = try consume(binary.lexeme)
+            var rhs = try parseUnaryOperator()
+            let nextBinary = AST.BinaryOperator(current.lexeme)
+            let nextPrecedence = nextBinary?.precedence ?? -1
+            if precedence < nextPrecedence {
+                rhs = try parseBinaryOperator(rhs, precedence + 1)
+            }
+            lhs = .binary(lhs, binary, rhs)
+        }
+    }
+    
+    private func parseBody(_ close: Token.Lexeme) throws -> [AST.Expression] {
+        var body: [AST.Expression] = []
+        while !check(close) {
+            body.append(try parseExpression())
+            if check(.end) {
+                let _ = try consume(.end)
+            }
+        }
+        return body
+    }
+    
     private func parseBoolean(_ value: Bool) throws -> AST.Expression {
         let _ = try consume(.boolean(value))
-        return .boolean(value)
-    }
-    
-    private func parseNumber(_ value: Double) throws -> AST.Expression {
-        let _ = try consume(.number(value))
-        return .number(value)
-    }
-    
-    private func parseString(_ value: String) throws -> AST.Expression {
-        let _ = try consume(.string(value))
-        return .string(value)
+        return .primary(.boolean(value))
     }
 
-    private func parseIdentifier(_ value: AST.Identifier) throws -> AST.Expression {
-        let _ = try consume(.identifier(value))
-        return .variable(value)
+    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {
+        switch current.lexeme {
+        case .parenLeft:
+            let _ = try consume(.parenLeft)
+            var parameters: [AST.Identifier: AST.Expression] = [:]
+            while !check(.parenRight) {
+                let key = try parseKey()
+                let _ = try consume(.colon)
+                let value = try parseValue()
+                if parameters[key] == nil {
+                    parameters[key] = value
+                } else {
+                    throw Error.degenerateKey(current)
+                }
+                if check(.comma) {
+                    let _ = try consume(.comma)
+                    if check(.parenRight) {
+                        throw Error.trailingToken(current)
+                    }
+                }
+            }
+            let _ = try consume(.parenRight)
+            return try parseCall(.call(lvalue, parameters))
+        case .squareLeft:
+            let _ = try consume(.squareLeft)
+            let index = try parseIndex()
+            let _ = try consume(.squareRight)
+            return try parseCall(.get(lvalue, index))
+        default:
+            return lvalue
+        }
     }
-
-    private func parseKeyword(_ value: AST.Keyword) throws -> AST.Expression {
-        let _ = try consume(.keyword(value))
-        return .variable(value.rawValue)
+    
+    private func parseExpression() throws -> AST.Expression {
+        let unary = try parseUnaryOperator()
+        let lvalue = try parseBinaryOperator(unary)
+        if check(.colon) {
+            let _ = try consume(.colon)
+            let rvalue = try parseExpression()
+            switch lvalue {
+            case .get(let llvalue, let index):
+                return .set(llvalue, index, rvalue)
+            case .primary(let primary):
+                switch primary {
+                case .identifier(let identifier):
+                    return .assign(identifier, rvalue)
+                default:
+                    throw Error.invalidAssignment(current)
+                }
+            default:
+                throw Error.invalidAssignment(current)
+            }
+        }
+        return lvalue
+    }
+    
+    private func parseFunction() throws -> AST.Expression {
+        let _ = try consume(.at)
+        let _ = try consume(.parenLeft)
+        let arguments = try parseArguments(.parenRight)
+        let _ = try consume(.parenRight)
+        let _ = try consume(.curlyLeft)
+        let body = try parseBody(.curlyRight)
+        let _ = try consume(.curlyRight)
+        return .primary(.function(arguments, body))
     }
 
     private func parseGroup() throws -> AST.Expression {
@@ -167,76 +280,92 @@ public final class Parser {
         let _ = try consume(.parenRight)
         return result
     }
-
+    
+    private func parseIdentifier(_ value: AST.Identifier) throws -> AST.Expression {
+        let _ = try consume(.identifier(value))
+        return .primary(.identifier(value))
+    }
+    
+    private func parseIndex() throws -> AST.Index {
+        let token = current
+        let index = try parseExpression()
+        switch index {
+        case .assign(_, _):
+            throw Error.invalidIndex(token)
+        case .binary(_, _, _):
+            return index
+        case .call(_, _):
+            return index
+        case .get(_, _):
+            return index
+        case .primary(_):
+            return index
+        case .set(_, _, _):
+            throw Error.invalidIndex(token)
+        case .unary(_, _):
+            return index
+        }
+    }
+    
+    private func parseKey() throws -> AST.Identifier {
+        if case let .identifier(value) = current.lexeme {
+            let _ = try consume(.identifier(value))
+            return value
+        }
+        throw Error.invalidKey(current)
+    }
+    
+    private func parseKeyword(_ value: AST.Keyword) throws -> AST.Expression {
+        let _ = try consume(.keyword(value))
+        return .primary(.keyword(value))
+    }
+    
     private func parseList() throws -> AST.Expression {
         let _ = try consume(.squareLeft)
         var elements: [AST.Expression] = []
         while !check(.squareRight) {
-            elements.append(try parseExpression())
+            elements.append(try parseValue())
             if check(.comma) {
-                let _ = try consume(.comma, notFollowedBy:.squareRight)
+                let _ = try consume(.comma)
+                if check(.squareRight) {
+                    throw Error.trailingToken(current)
+                }
             }
         }
         let _ = try consume(.squareRight)
-        return .list(elements)
+        return .primary(.list(elements))
     }
     
     private func parseMap() throws -> AST.Expression {
         let _ = try consume(.curlyLeft)
         var elements: [AST.Identifier: AST.Expression] = [:]
         while !check(.curlyRight) {
-            switch current.lexeme {
-            case .identifier(let key):
-                let _ = try parseIdentifier(key)
-                let _ = try consume(.colon)
-                elements[key] = try parseExpression()
-            default:
-                throw Error.unexpectedMapKey(current)
+            let key = try parseKey()
+            let _ = try consume(.colon)
+            let value = try parseValue()
+            if elements[key] == nil {
+                elements[key] = value
+            } else {
+                throw Error.degenerateKey(current)
             }
-            if check(.comma) {
-                let _ = try consume(.comma, notFollowedBy:.curlyRight)
-            }
-        }
-        let _ = try consume(.curlyRight)
-        return .map(elements)
-    }
-    
-    private func parseFunction() throws -> AST.Expression {
-        let _ = try consume(.curlyLeft)
-        let _ = try consume(.parenLeft)
-        /// Args
-        var args: [AST.Identifier] = []
-        while !check(.parenRight) {
-            switch current.lexeme {
-            case .identifier(let name):
-                let _ = try consume(.identifier(name))
-                args.append(name)
-            default:
-                throw Error.unexpectedFunctionArgumentName(current)
-            }
-            if check(.comma) {
-                let _ = try consume(.comma, notFollowedBy:.parenRight)
-            }
-        }
-        let _ = try consume(.parenRight)
-        let _ = try consume(.bar)
-        /// Body
-        var body: [AST.Expression] = []
-        while !check(.curlyRight) {
-            body.append(try parseExpression())
             if check(.comma) {
                 let _ = try consume(.comma)
-            } else if check(.end) {
-                let _ = try consume(.end)
+                if check(.curlyRight) {
+                    throw Error.trailingToken(current)
+                }
             }
         }
         let _ = try consume(.curlyRight)
-        return .function(args, body)
+        return .primary(.map(elements))
     }
-
+    
+    private func parseNumber(_ value: Double) throws -> AST.Expression {
+        let _ = try consume(.number(value))
+        return .primary(.number(value))
+    }
+    
     private func parsePrimary() throws -> AST.Expression {
-        let lexeme = current.lexeme
-        switch lexeme {
+        switch current.lexeme {
         case .boolean(let value):
             return try parseBoolean(value)
         case .number(let value):
@@ -252,115 +381,49 @@ public final class Parser {
         case .squareLeft:
             return try parseList()
         case .curlyLeft:
-            /// Look ahead one token
-            if isFinishedNext {
-                throw Error.unexpectedStreamEnd(current)
-            }
-            switch next.lexeme {
-            /// '{' '(' => function
-            case .parenLeft:
-                return try parseFunction()
-            /// '{' 'identifier' => map
-            case .identifier(_):
-                return try parseMap()
-            /// '{' '}' => empty map
-            case .curlyRight:
-                return try parseMap()
-            default:
-                throw Error.unexpectedMapOrFunction(current, next.lexeme)
-            }
+            return try parseMap()
+        case .at:
+            return try parseFunction()
         default:
-            throw Error.unsupportedExpression(current)
+            throw Error.unsupportedPrimary(current)
         }
     }
     
-    private func parseExpression() throws -> AST.Expression {
-        let result = try parseUnaryOperator()
-        return try parseBinaryOperator(result)
-    }
-    
-    /**
-     
-        cur = tokenizer.cur_token
-        if (cur is None or cur.name != 'BINOP' or OPINFO_MAP[cur.value].prec < min_prec): break
-     
-        # Get the operator's precedence and associativity, and compute a
-        # minimal precedence for the recursive call
-        op = cur.value
-        prec, assoc = OPINFO_MAP[op]
-        next_min_prec = prec + 1 if assoc == 'LEFT' else prec
-
-        # Consume the current token and prepare the next one for the
-        # recursive call
-        tokenizer.get_next_token()
-        atom_rhs = compute_expr(tokenizer, next_min_prec)
-
-        # Update lhs with the new value
-        atom_lhs = compute_op(op, atom_lhs, atom_rhs)
-
-     **/
-    
-    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
-        var lhs = lhs
-        while true {
-            guard let binary = AST.BinaryOperator(current.lexeme) else { return lhs }
-            if binary.precedence < precedence { return lhs }
-            
-            var rhs: AST.Expression
-            switch binary {
-            case .get:
-                rhs = try parseGetOperatorArguments()
-            case .call:
-                rhs = try parseCallOperatorArguments()
-            default:
-                let _ = try consume(binary.lexeme)
-                rhs = try parseUnaryOperator()
-            }
-            let nextBinary = AST.BinaryOperator(current.lexeme)
-            let nextPrecedence = nextBinary?.precedence ?? -1
-            if precedence < nextPrecedence {
-                rhs = try parseBinaryOperator(rhs, binary.associativity == .left ? precedence + 1 : precedence)
-//                rhs = try parseBinaryOperator(rhs, precedence + 1)
-            }
-            lhs = .binary(lhs, binary, rhs)
-        }
-    }
-    
-    private func parseCallOperatorArguments() throws -> AST.Expression {
-        let _ = try consume(.parenLeft)
-        var keywords: [AST.Identifier: AST.Expression] = [:]
-        while !check(.parenRight) {
-            switch current.lexeme {
-            case .identifier(let key):
-                let _ = try parseIdentifier(key)
-                let _ = try consume(.colon)
-                keywords[key] = try parseExpression()
-            default:
-                throw Error.unexpectedFunctionArgumentName(current)
-            }
-            if check(.comma) {
-                let _ = try consume(.comma, notFollowedBy:.parenRight)
-            }
-        }
-        let _ = try consume(.parenRight)
-        return .map(keywords)
-    }
-
-    private func parseGetOperatorArguments() throws -> AST.Expression {
-        let _ = try consume(.squareLeft)
-        let result = try parseExpression()
-        let _ = try consume(.squareRight)
-        return result
+    private func parseString(_ value: String) throws -> AST.Expression {
+        let _ = try consume(.string(value))
+        return .primary(.string(value))
     }
     
     private func parseUnaryOperator() throws -> AST.Expression {
         guard let unary = AST.UnaryOperator(current.lexeme) else {
-            return try parsePrimary()
+            let primary = try parsePrimary()
+            return try parseCall(primary)
         }
         let _ = try consume(unary.lexeme)
         return .unary(unary, try parseUnaryOperator())
     }
-    
+
+    private func parseValue() throws -> AST.Expression {
+        let token = current
+        let value = try parseExpression()
+        switch value {
+        case .assign(_, _):
+            throw Error.invalidValue(token)
+        case .binary(_, _, _):
+            return value
+        case .call(_, _):
+            return value
+        case .get(_, _):
+            return value
+        case .primary(_):
+            return value
+        case .set(_, _, _):
+            throw Error.invalidValue(token)
+        case .unary(_, _):
+            return value
+        }
+    }
+
     private func reset() {
         expressions.removeAll(keepingCapacity:true)
         currentIndex = tokens.startIndex
@@ -369,17 +432,9 @@ public final class Parser {
     private var current: Token {
         return tokens[currentIndex]
     }
-
-    private var isFinishedCurrent: Bool {
-        return currentIndex >= tokens.endIndex
-    }
     
-    private var isFinishedNext: Bool {
-        return currentIndex + 1 >= tokens.endIndex
-    }
-
-    private var next: Token {
-        return tokens[currentIndex + 1]
+    private var isFinished: Bool {
+        return current.lexeme == .end
     }
 
     private let tokens: [Token]

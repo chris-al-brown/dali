@@ -42,49 +42,63 @@ The grammar of the language is given by the following EBNF grammar:
  statement      → expression ',' expression
                 | expression eol
  
- expression     → binary
-                | unary
-                | group
-                | literal
+ expression     → call '[' index ']' ':' expression
+                | call '[' index ']'
+                | identifier ':' expression
+                | identifier
  
- binary         → expression '[' expression ']'
-                | expression '(' keywords? ')'
-                | expression (':' | '+' | '-' | '*' | '/' | '=' | '<' | '>' | '&' | '|' ) expression
+ call           → primary ( '(' keyvalues? ')' | '[' index ']' )*
 
- keywords       → identifier ':' expression ( ',' identifier ':' expression )*
- 
- unary          → ( '!' | '+' | '-' ) expression
+ index          → call
 
- group          → '(' expression ')'
+ keyvalues      → identifier ':' expression ( ',' identifier ':' expression )*
  
- literal        → boolean
+ or             → and ( '|' and )*
+ 
+ and            → equality ( '&' equality )*
+ 
+ equality       → comparison ( '=' comparison )*
+ 
+ comparison     → term ( ( '>' | '<' ) term )*
+ 
+ term           → factor ( ( '-' | '+' ) factor )*
+ 
+ factor         → unary ( ( '/' | '*' ) unary )*
+ 
+ unary          → ( '!' | '-' | '+' ) unary | call
+ 
+ primary        → boolean
                 | function
+                | group
+                | identifier
+                | keyword
                 | list
                 | map
                 | number
                 | string
-                | variable
  
  boolean        → 'true' | 'false'
  
- function       → '{' '(' arguments? ')' '|' expression* '}'
+ function       → '@' '(' arguments? ')' '{' body '}'
 
  arguments      → identifier ( ',' identifier )*
+ 
+ body           → expression*
+ 
+ group          → '(' expression ')'
  
  list           → '[' elements? ']'
  
  elements       → expression ( ',' expression )*
  
- map            → '{' keywords? '}'
+ map            → '{' keyvalues? '}'
  
  number         → digit+ ( '.' digit+ )?
  
  string         → '"' ^( '"' | eol )* '"'
-
- variable       → identifier | reserved
-
+ 
  identifier     → alpha ( alpha | digit )*
-
+ 
  keyword        → 'pi' | 'e'
  
  alpha          → 'a' ... 'z' | 'A' ... 'Z' | '_'

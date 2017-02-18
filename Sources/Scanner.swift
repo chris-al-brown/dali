@@ -123,9 +123,11 @@ public final class Scanner {
             
             /// Newline
             case "\n":
-                append(lexeme:.end)
+                append(lexeme:.newline)
                 
             /// Single-character tokens
+            case "@":
+                append(lexeme:.at)
             case ":":
                 append(lexeme:.colon)
             case ",":
@@ -250,6 +252,7 @@ public final class Scanner {
                 }
             }
         }
+        tokens.append(Token(.end, locate()))
         return tokens
     }
     

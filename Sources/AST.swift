@@ -31,15 +31,6 @@ public struct AST {
 
     public enum BinaryOperator {
         
-        public enum Associativity {
-            case left
-            case right
-        }
-        
-        case get                /// [ ]
-        case set                /// :
-        case call               /// ( )
-        
         case add                /// +
         case subtract           /// -
         case multiply           /// *
@@ -54,12 +45,6 @@ public struct AST {
         
         public init?(_ lexeme: Token.Lexeme) {
             switch lexeme {
-            case .squareLeft:
-                self = .get
-            case .colon:
-                self = .set
-            case .parenLeft:
-                self = .call
             case .plus:
                 self = .add
             case .minus:
@@ -83,43 +68,8 @@ public struct AST {
             }
         }
         
-        public var associativity: Associativity {
-            switch self {
-            case .get:
-                return .left
-            case .set:
-                return .left
-            case .call:
-                return .left
-            case .add:
-                return .left
-            case .subtract:
-                return .left
-            case .multiply:
-                return .left
-            case .divide:
-                return .left
-            case .equalTo:
-                return .left
-            case .lessThan:
-                return .left
-            case .greaterThan:
-                return .left
-            case .and:
-                return .left
-            case .or:
-                return .left
-            }
-        }
-        
         public var lexeme: Token.Lexeme {
             switch self {
-            case .get:
-                return .squareLeft
-            case .set:
-                return .colon
-            case .call:
-                return .parenLeft
             case .add:
                 return .plus
             case .subtract:
@@ -143,65 +93,82 @@ public struct AST {
         
         public var precedence: Int {
             switch self {
-            case .set:
-                return 1
             case .and:
-                return 2
+                return 10
             case .or:
-                return 2
+                return 20
             case .equalTo:
-                return 4
+                return 30
             case .lessThan:
-                return 8
+                return 40
             case .greaterThan:
-                return 8
+                return 40
             case .add:
-                return 16
+                return 50
             case .subtract:
-                return 16
+                return 50
             case .multiply:
-                return 32
+                return 60
             case .divide:
-                return 32
-            case .get:
-                return 128
-            case .call:
-                return 128
+                return 60
             }
         }
     }
     
     public indirect enum Expression {
-        
+
         /// name: "Chris"
+        case assign(Identifier, Expression)
+        
+        /// true & !true
         case binary(Expression, BinaryOperator, Expression)
 
+        /// circle(x:0, y:0, radius:1)
+        case call(Expression, [Identifier: Expression])
+
+        /// geometry[circle]
+        case get(Expression, Index)
+
+        /// person[name]: "Nick" + " " + "Robins"
+        case set(Expression, Index, Expression)
+
+        /// true, my_var, "Hello", etc.
+        case primary(Primary)
+
+        /// !true
+        case unary(UnaryOperator, Expression)
+    }
+    
+    public typealias Identifier = String
+
+    public typealias Index = Expression
+    
+    public enum Primary {
+        
         /// false
         case boolean(Bool)
 
         /// { (first, second) | first + second }
         case function([Identifier], [Expression])
+
+        /// x
+        case identifier(Identifier)
         
+        /// pi
+        case keyword(Keyword)
+
         /// [x + 1, y + 1, z + 1]
         case list([Expression])
-
+        
         /// [name: "Chris", age: 15]
         case map([Identifier: Expression])
-
+        
         /// 1.512
         case number(Double)
-        
+
         /// "message"
         case string(String)
-
-        /// !true
-        case unary(UnaryOperator, Expression)
-
-        /// my_variable
-        case variable(Variable)
     }
-    
-    public typealias Identifier = String
     
     public typealias Keyword = Token.Keyword
     
@@ -234,6 +201,4 @@ public struct AST {
             }
         }
     }
-
-    public typealias Variable = String
 }
