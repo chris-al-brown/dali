@@ -125,10 +125,21 @@ public struct Dali {
         log("-------------------------------------")
         log(" dali REPL v0.1.0 (press ^C to exit) ")
         log("-------------------------------------")
+        var lines = ""
         while true {
             log(">>>", terminator:" ")
-            guard let source = readLine(strippingNewline:false) else { continue }
-            compile(Source(input:.stdin, source:source, supportsColor:supportsColor))
+            while true {
+                guard let line = readLine(strippingNewline:false) else { break }
+                lines += line
+                let source = Source(input:.stdin, source:lines, supportsColor:supportsColor)
+                if source.checkParentheses() {
+                    compile(source)
+                    lines.removeAll(keepingCapacity:true)
+                    break
+                } else {
+                    log("...", terminator:" ")
+                }
+            }
         }
     }
     
