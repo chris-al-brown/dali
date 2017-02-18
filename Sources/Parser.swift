@@ -151,26 +151,6 @@ public final class Parser {
         return expressions
     }
     
-    private func parseArguments(_ close: Token.Lexeme) throws -> [AST.Identifier] {
-        var arguments: [AST.Identifier] = []
-        while !check(close) {
-            switch current.lexeme {
-            case .identifier(let name):
-                let _ = try consume(.identifier(name))
-                arguments.append(name)
-            default:
-                throw Error.invalidArgumentName(current)
-            }
-            if check(.comma) {
-                let _ = try consume(.comma)
-                if check(close) {
-                    throw Error.trailingToken(current)
-                }
-            }
-        }
-        return arguments
-    }
-
     private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
@@ -189,17 +169,6 @@ public final class Parser {
             }
             lhs = .binary(lhs, binary, rhs)
         }
-    }
-    
-    private func parseBody(_ close: Token.Lexeme) throws -> [AST.Expression] {
-        var body: [AST.Expression] = []
-        while !check(close) {
-            body.append(try parseExpression())
-            if check(.end) {
-                let _ = try consume(.end)
-            }
-        }
-        return body
     }
     
     private func parseBoolean(_ value: Bool) throws -> AST.Expression {
@@ -245,7 +214,11 @@ public final class Parser {
         let lvalue = try parseBinaryOperator(unary)
         if check(.colon) {
             let _ = try consume(.colon)
-            let rvalue = try parseExpression()
+            
+            /// TODO: Does this fix the r-value issue
+            let rvalue = try parseValue()
+//            let rvalue = try parseExpression()
+            
             switch lvalue {
             case .get(let llvalue, let index):
                 return .set(llvalue, index, rvalue)
@@ -266,10 +239,33 @@ public final class Parser {
     private func parseFunction() throws -> AST.Expression {
         let _ = try consume(.at)
         let _ = try consume(.parenLeft)
-        let arguments = try parseArguments(.parenRight)
+        /// Arguments
+        var arguments: [AST.Identifier] = []
+        while !check(.parenRight) {
+            switch current.lexeme {
+            case .identifier(let name):
+                let _ = try consume(.identifier(name))
+                arguments.append(name)
+            default:
+                throw Error.invalidArgumentName(current)
+            }
+            if check(.comma) {
+                let _ = try consume(.comma)
+                if check(.parenRight) {
+                    throw Error.trailingToken(current)
+                }
+            }
+        }
         let _ = try consume(.parenRight)
         let _ = try consume(.curlyLeft)
-        let body = try parseBody(.curlyRight)
+        /// Body
+        var body: [AST.Expression] = []
+        while !check(.curlyRight) {
+            body.append(try parseExpression())
+            if check(.end) {
+                let _ = try consume(.end)
+            }
+        }
         let _ = try consume(.curlyRight)
         return .primary(.function(arguments, body))
     }
