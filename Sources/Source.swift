@@ -75,6 +75,31 @@ public struct Source: BidirectionalCollection {
         return storage.unicodeScalars[position]
     }
     
+    public func checkParentheses() -> Bool {
+        var curly = 0
+        var round = 0
+        var square = 0
+        for scalar in self {
+            switch scalar {
+            case "{":
+                curly += 1
+            case "}":
+                curly -= 1
+            case "(":
+                round += 1
+            case ")":
+                round -= 1
+            case "[":
+                square += 1
+            case "]":
+                square -= 1
+            default:
+                break
+            }
+        }
+        return curly == 0 && round == 0 && square == 0
+    }
+
     public func columns(for location: Location) -> ClosedRange<Int> {
         var currentIndex = location.lowerBound
         /// Fix for eol to be at end of a line
@@ -174,7 +199,7 @@ public struct Source: BidirectionalCollection {
     public func index(before i: Index) -> Index {
         return storage.unicodeScalars.index(before:i)
     }
-
+    
     public var startIndex: Index {
         return storage.unicodeScalars.startIndex
     }
