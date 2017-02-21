@@ -35,7 +35,7 @@ public struct Dali {
     }
     
     /// Compile a program from a source string
-    public static func compile(_ source: Source) {
+    public static func compile(_ source: Source, supportsColor: Bool) {
         let scanner = Scanner(source)
         do {
             let tokens = try scanner.scan()
@@ -43,7 +43,7 @@ public struct Dali {
                 let parser = Parser(tokens)
                 let expressions = try parser.parse()
                 for expression in expressions {
-                    log(pretty(expression))
+                    log(AST.pretty(expression, supportsColor:supportsColor))
                 }
             } catch let issue as Parser.Error {
                 error(source, tokens, issue)
@@ -82,47 +82,6 @@ public struct Dali {
         print(string, separator:"", terminator:terminator)
     }
     
-    
-    
-    /// DEBUG
-    
-    public static func pretty(_ expression: AST.Expression) -> String {
-        return "\(expression)"
-        
-//        switch expression {
-//        case .binary(let lhs, let op, let rhs):
-//            switch op {
-//            case .get:
-//                return "\(pretty(lhs))[\(pretty(rhs))]"
-//            case .call:
-//                return "\(pretty(lhs))(\(pretty(rhs)))"
-//            default:
-//                return "(\(op.lexeme) \(pretty(lhs)) \(pretty(rhs)))"
-//            }
-//        case .boolean(let value):
-//            return value.description
-//        case .function(_, _):
-//            return ""
-//        case .list(_):
-//            return ""
-//        case .map(_):
-//            return ""
-//        case .number(let value):
-//            return value.description
-//        case .string(let value):
-//            return value
-//        case .unary(let op, let rhs):
-//            return "(\(op.lexeme) \(pretty(rhs))"
-//        case .variable(let value):
-//            return value
-//        }
-        
-    }
-    
-    /// DEBUG
-    
-    
-    
     /// Read-Eval-Print Loop
     public static func repl(supportsColor: Bool) -> Never {
         log("-------------------------------------")
@@ -136,7 +95,7 @@ public struct Dali {
                 lines += line
                 let source = Source(input:.stdin, source:lines, supportsColor:supportsColor)
                 if source.checkParentheses() {
-                    compile(source)
+                    compile(source, supportsColor:supportsColor)
                     lines.removeAll(keepingCapacity:true)
                     break
                 } else {
@@ -150,7 +109,7 @@ public struct Dali {
     public static func script(_ name: String, supportsColor: Bool) {
         do {
             let source = try String(contentsOfFile:name, encoding:.utf8)
-            compile(Source(input:.file(name), source:source, supportsColor:supportsColor))
+            compile(Source(input:.file(name), source:source, supportsColor:supportsColor), supportsColor:supportsColor)
             exit(with:.success)
         } catch let issue {
             error("ScriptError: \(issue.localizedDescription)")
