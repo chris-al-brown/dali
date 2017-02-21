@@ -30,11 +30,12 @@ import Foundation
 public final class Parser {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case degenerateKey(Token)
+        case degenerateMapKey(Token, String)
+        case degenerateArgumentName(Token, String)
         case invalidArgumentName(Token)
         case invalidAssignment(Token)
         case invalidIndex(Token)
-        case invalidKey(Token)
+        case invalidMapKey(Token)
         case invalidValue(Token)
         case prematureStreamEnd(Token)
         case trailingToken(Token)
@@ -43,15 +44,17 @@ public final class Parser {
 
         public var description: String {
             switch self {
-            case .degenerateKey(let token):
-                return "Degenerate key found: '\(token.lexeme)'"
+            case .degenerateMapKey(_, let key):
+                return "Degenerate map key: '\(key)'"
+            case .degenerateArgumentName(_, let name):
+                return "Degenerate argument name: '\(name)'"
             case .invalidArgumentName(let token):
                 return "Invalid argument name: '\(token.lexeme)'"
             case .invalidAssignment(let token):
                 return "Invalid right-hand assignment: '\(token.lexeme)'"
             case .invalidIndex(let token):
                 return "Invalid index: '\(token.lexeme)'"
-            case .invalidKey(let token):
+            case .invalidMapKey(let token):
                 return "Invalid map key: '\(token.lexeme)'"
             case .invalidValue(let token):
                 return "Invalid value: '\(token.lexeme)'"
@@ -68,7 +71,9 @@ public final class Parser {
 
         public var location: Source.Location {
             switch self {
-            case .degenerateKey(let token):
+            case .degenerateMapKey(let token, _):
+                return token.location
+            case .degenerateArgumentName(let token, _):
                 return token.location
             case .invalidArgumentName(let token):
                 return token.location
@@ -76,7 +81,7 @@ public final class Parser {
                 return token.location
             case .invalidIndex(let token):
                 return token.location
-            case .invalidKey(let token):
+            case .invalidMapKey(let token):
                 return token.location
             case .invalidValue(let token):
                 return token.location
@@ -151,6 +156,14 @@ public final class Parser {
         return expressions
     }
     
+    private func parseArgumentName() throws -> AST.Identifier {
+        if case let .identifier(value) = current.lexeme {
+            let _ = try consume(.identifier(value))
+            return value
+        }
+        throw Error.invalidArgumentName(current)
+    }
+    
     private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
@@ -162,10 +175,8 @@ public final class Parser {
             }
             let _ = try consume(binary.lexeme)
             var rhs = try parseUnaryOperator()
-            let nextBinary = AST.BinaryOperator(current.lexeme)
-            let nextPrecedence = nextBinary?.precedence ?? -1
-            if precedence < nextPrecedence {
-                rhs = try parseBinaryOperator(rhs, precedence + 1)
+            if let nextBinary = AST.BinaryOperator(current.lexeme), binary.precedence < nextBinary.precedence {
+                rhs = try parseBinaryOperator(rhs, binary.precedence + 1)
             }
             lhs = .binary(lhs, binary, rhs)
         }
@@ -182,13 +193,13 @@ public final class Parser {
             let _ = try consume(.parenLeft)
             var parameters: [AST.Identifier: AST.Expression] = [:]
             while !check(.parenRight) {
-                let key = try parseKey()
+                let name = try parseArgumentName()
                 let _ = try consume(.colon)
                 let value = try parseValue()
-                if parameters[key] == nil {
-                    parameters[key] = value
+                if parameters[name] == nil {
+                    parameters[name] = value
                 } else {
-                    throw Error.degenerateKey(current)
+                    throw Error.degenerateArgumentName(current, name)
                 }
                 if check(.comma) {
                     let _ = try consume(.comma)
@@ -303,12 +314,12 @@ public final class Parser {
         }
     }
     
-    private func parseKey() throws -> AST.Identifier {
+    private func parseMapKey() throws -> AST.Identifier {
         if case let .identifier(value) = current.lexeme {
             let _ = try consume(.identifier(value))
             return value
         }
-        throw Error.invalidKey(current)
+        throw Error.invalidMapKey(current)
     }
     
     private func parseKeyword(_ value: AST.Keyword) throws -> AST.Expression {
@@ -336,13 +347,13 @@ public final class Parser {
         let _ = try consume(.curlyLeft)
         var elements: [AST.Identifier: AST.Expression] = [:]
         while !check(.curlyRight) {
-            let key = try parseKey()
+            let key = try parseMapKey()
             let _ = try consume(.colon)
             let value = try parseValue()
             if elements[key] == nil {
                 elements[key] = value
             } else {
-                throw Error.degenerateKey(current)
+                throw Error.degenerateMapKey(current, key)
             }
             if check(.comma) {
                 let _ = try consume(.comma)
