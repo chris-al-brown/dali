@@ -104,8 +104,8 @@
     first + second
 
     # Multiple
-    # first: 1.0, second: 0.2, third: 3
-    # first + second + third
+    first: 1.0, second: 0.2, third: 3
+    first + second + third
 
 # Functions
 

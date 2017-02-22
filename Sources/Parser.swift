@@ -155,6 +155,9 @@ public final class Parser {
             /// Ignore blank lines
             case .newline:
                 let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+            /// Multiple expressions delimited by commas
+            case .comma:
+                let _ = try consume(.comma, strippingCommentsAndNewlines:false)
             default:
                 expressions.append(try parseExpression())
             }
