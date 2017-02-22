@@ -37,7 +37,7 @@
         }
         person[name]
         person[address]: "102 Rivera Boulevard"
-
+        
         # A list (i.e. array, etc.)
         numbers: [0.0,
             2.0, 4.0, 6.0,
@@ -51,6 +51,15 @@
 
         mixed: [false, 1.0, "Hello world"]
         mixed[0]: 0.0
+
+        # A mixed datatype  
+        outer: {
+            inner: {
+                values: [10, 11, 12],
+                flag: false
+            } 
+        }
+        outer[inner][values][0]: -10
 
 # Operators
 
