@@ -42,8 +42,8 @@ public struct Token {
     }
     
     public enum Keyword: String {
-        case pi = "pi"
         case e  = "e"
+        case pi = "pi"
     }
     
     public enum Lexeme: Equatable {
@@ -87,7 +87,7 @@ public struct Token {
         case identifier(String)     /// my_variable
         
         /// Keywords
-        case keyword(Keyword)       /// this, pi, e, etc.
+        case keyword(Keyword)       /// pi, e, width, height, etc.
         
         /// End of line
         case newline                /// newline
