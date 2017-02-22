@@ -165,7 +165,7 @@ public final class Dali {
             output += format(lhs)
             output += "("
             output += args.reduce("") {
-                let key = $0.1.0
+                let key = useColor ? ANSIColor.cyan.apply($0.1.0) : $0.1.0
                 let value = format($0.1.1)
                 return $0.0 + key + ": " + value + ", "
             }
@@ -213,21 +213,22 @@ public final class Dali {
             output += useColor ? ANSIColor.green.apply("@") : "@"
             output += "("
             output += args.reduce("") {
-                return $0.0 + $0.1 + ", "
+                let arg = useColor ? ANSIColor.cyan.apply($0.1) : $0.1
+                return $0.0 + arg + ", "
             }
             if !args.isEmpty {
                 let _ = output.unicodeScalars.popLast()
                 let _ = output.unicodeScalars.popLast()
             }
-            output += "){"
+            output += ") {"
             output += body.reduce("") {
                 return $0.0 + format($0.1) + ", "
             }
+            output += "}"
             if !body.isEmpty {
                 let _ = output.unicodeScalars.popLast()
                 let _ = output.unicodeScalars.popLast()
             }
-            output += "}"
             return output
         case .identifier(let value):
             return useColor ? ANSIColor.cyan.apply(value) : value
@@ -249,7 +250,7 @@ public final class Dali {
             var output = ""
             output += "{"
             output += values.reduce("") {
-                let key = $0.1.0
+                let key = useColor ? ANSIColor.cyan.apply($0.1.0) : $0.1.0
                 let value = format($0.1.1)
                 return $0.0 + key + ": " + value + ", "
             }
@@ -309,15 +310,17 @@ public final class Dali {
             print("-------------------------------------")
             print(" dali REPL v0.1.0 (press ^C to exit) ")
             print("-------------------------------------")
+            let prompt  = ">>>"
+            let tab     = "   "
             var buffer = ""
             while true {
-                print(">>>", terminator:" ")
+                print(prompt, terminator:" ")
                 while true {
                     guard let line = readLine(strippingNewline:false) else { break }
                     buffer += line
                     let source = Source(buffer)
                     if source.needsContinuation {
-                        print("...", terminator:" ")
+                        print(tab, terminator:" ")
                     } else {
                         compile(source)
                         buffer.removeAll(keepingCapacity:true)
