@@ -239,7 +239,7 @@ public final class Scanner {
                     }
                     /// Not exactly sure why this is optional?
                     let value = String(source.extract(locate())).unsafelyUnwrapped
-                    if let keyword = Token.Lexeme.keywords[value] {
+                    if let keyword = Token.Keyword.getLexeme(for:value) {
                         append(lexeme:keyword)
                     } else {
                         append(lexeme:.identifier(value))

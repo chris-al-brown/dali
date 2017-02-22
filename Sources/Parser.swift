@@ -184,7 +184,7 @@ public final class Parser {
         return .primary(.boolean(value))
     }
 
-    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {
+    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {        
         switch current.lexeme {
         case .parenLeft:
             let _ = try consume(.parenLeft)
