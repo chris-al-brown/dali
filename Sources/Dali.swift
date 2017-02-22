@@ -145,7 +145,7 @@ public final class Dali {
         switch value {
         case .assign(let key, let value):
             var output = ""
-            output += format(key)
+            output += useColor ? ANSIColor.cyan.apply(key) : key
             output += ":"
             output += " "
             output += format(value)
@@ -165,7 +165,7 @@ public final class Dali {
             output += format(lhs)
             output += "("
             output += args.reduce("") {
-                let key = format($0.1.0)
+                let key = $0.1.0
                 let value = format($0.1.1)
                 return $0.0 + key + ": " + value + ", "
             }
@@ -204,10 +204,6 @@ public final class Dali {
         }
     }
     
-    private func format(_ value: AST.Identifier) -> String {
-        return useColor ? ANSIColor.cyan.apply(value) : value
-    }
-    
     private func format(_ value: AST.Primary) -> String {
         switch value {
         case .boolean(let value):
@@ -217,7 +213,7 @@ public final class Dali {
             output += useColor ? ANSIColor.green.apply("@") : "@"
             output += "("
             output += args.reduce("") {
-                return $0.0 + format($0.1) + ", "
+                return $0.0 + $0.1 + ", "
             }
             if !args.isEmpty {
                 let _ = output.unicodeScalars.popLast()
@@ -234,7 +230,7 @@ public final class Dali {
             output += "}"
             return output
         case .identifier(let value):
-            return format(value)
+            return useColor ? ANSIColor.cyan.apply(value) : value
         case .keyword(let value):
             return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
         case .list(let values):
@@ -253,7 +249,7 @@ public final class Dali {
             var output = ""
             output += "{"
             output += values.reduce("") {
-                let key = format($0.1.0)
+                let key = $0.1.0
                 let value = format($0.1.1)
                 return $0.0 + key + ": " + value + ", "
             }
@@ -272,37 +268,6 @@ public final class Dali {
     
     private func format(_ issue: Parser.Error, in source: Source) -> String {
         return format(issue.description, in:source, at:issue.location)
-        
-//        var lineStartIndex = issue.location.lowerBound
-//        if _source[lineStartIndex] == "\n" && lineStartIndex != _source.startIndex {
-//            lineStartIndex = _source.index(before:lineStartIndex)
-//        }
-//        while _source[lineStartIndex] != "\n" && lineStartIndex != _source.startIndex {
-//            lineStartIndex = _source.index(before:lineStartIndex)
-//        }
-//        var truncatedSource = _source.extract(_source.startIndex..<lineStartIndex)
-//        if useColor && !truncatedSource.isEmpty {
-//            let colors: [Token.Category: Color] = [
-//                .boolean: .yellow,
-//                .comment: .black,
-//                .keyword: .yellow,
-//                .number: .blue,
-//                .operator: .green,
-//                .string: .magenta,
-//                .variable: .cyan
-//            ]
-//            for token in tokens.reversed() {
-//                if token.location.upperBound <= lineStartIndex {
-//                    let category = token.lexeme.category
-//                    let substring = truncatedSource.unicodeScalars[token.location]
-//                    if let color = colors[category] {
-//                        truncatedSource.unicodeScalars.replaceSubrange(token.location, with:color.apply(substring).unicodeScalars)
-//                    }
-//                }
-//            }
-//        }
-//        return (truncatedSource + "\n" + format(error:message, at:location)).trimmingCharacters(in:.newlines)
-        
     }
 
     private func format(_ issue: Scanner.Error, in source: Source) -> String {

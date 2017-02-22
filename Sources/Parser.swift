@@ -30,68 +30,68 @@ import Foundation
 public final class Parser {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case degenerateMapKey(Token, String)
-        case degenerateArgumentName(Token, String)
+        case degenerateMapKey(Source.Location, String)
+        case degenerateArgumentName(Source.Location, String)
         case invalidArgumentName(Token)
-        case invalidAssignment(Token)
-        case invalidIndex(Token)
+        case invalidAssignment(Source.Location)
+        case invalidIndex(Source.Location)
         case invalidMapKey(Token)
-        case invalidValue(Token)
-        case prematureStreamEnd(Token)
-        case trailingToken(Token)
+        case invalidSyntax(Token)
+        case invalidValue(Source.Location)
+        case trailingComma(Source.Location)
+        case unexpectedStreamEnd(Token)
         case unexpectedToken(Token, Token.Lexeme)
-        case unsupportedPrimary(Token)
-
+        
         public var description: String {
             switch self {
             case .degenerateMapKey(_, let key):
-                return "Degenerate map key: '\(key)'"
+                return "Found a duplicate map key: '\(key)'"
             case .degenerateArgumentName(_, let name):
-                return "Degenerate argument name: '\(name)'"
+                return "Found a duplicate argument name: '\(name)'"
             case .invalidArgumentName(let token):
-                return "Invalid argument name: '\(token.lexeme)'"
-            case .invalidAssignment(let token):
-                return "Invalid right-hand assignment: '\(token.lexeme)'"
-            case .invalidIndex(let token):
-                return "Invalid index: '\(token.lexeme)'"
+                return "Invalid argument name: '\(token.lexeme)'."
+            case .invalidAssignment(_):
+                return "Can not assign to the left side of the expression."
+            case .invalidIndex(_):
+                return "Can not use an assignment or setter as an index type."
             case .invalidMapKey(let token):
                 return "Invalid map key: '\(token.lexeme)'"
-            case .invalidValue(let token):
-                return "Invalid value: '\(token.lexeme)'"
-            case .prematureStreamEnd(let token):
-                return "Token stream ended prematurely: '\(token.lexeme)'"
-            case .trailingToken(let token):
-                return "Trailing '\(token.lexeme)'"
+            case .invalidSyntax(let token):
+                return "Invalid syntax starting at '\(token.lexeme)'."
+            case .invalidValue(_):
+                return "Can not use an assignment or setter as a value type."
+            case .trailingComma(_):
+                return "Invalid syntax with trailing comma."
+            case .unexpectedStreamEnd(let token):
+                return "Expected more tokens starting at '\(token.lexeme)'."
             case .unexpectedToken(let token, let expected):
-                return "Expected to see '\(expected)' but found '\(token.lexeme)'"
-            case .unsupportedPrimary(let token):
-                return "Unsupported primary '\(token.lexeme)'."
+                return "Expected to see '\(expected)' but found '\(token.lexeme)'."
             }
         }
 
         public var location: Source.Location {
             switch self {
-            case .degenerateMapKey(let token, _):
-                return token.location
-            case .degenerateArgumentName(let token, _):
-                return token.location
+            case .degenerateMapKey(let location, _):
+                return location
+            case .degenerateArgumentName(let location, _):
+                return location
             case .invalidArgumentName(let token):
                 return token.location
-            case .invalidAssignment(let token):
-                return token.location
-            case .invalidIndex(let token):
-                return token.location
+            case .invalidAssignment(let location):
+                return location
+            case .invalidIndex(let location):
+                return location
             case .invalidMapKey(let token):
                 return token.location
-            case .invalidValue(let token):
+            case .invalidSyntax(let token):
                 return token.location
-            case .prematureStreamEnd(let token):
-                return token.location
-            case .trailingToken(let token):
+            case .invalidValue(let location):
+                return location
+            case .trailingComma(let location):
+                return location
+            case .unexpectedStreamEnd(let token):
                 return token.location
             case .unexpectedToken(let token, _):
-                return token.location
-            case .unsupportedPrimary(let token):
                 return token.location
             }
         }
@@ -116,7 +116,7 @@ public final class Parser {
     
     private func consume(_ lexeme: Token.Lexeme, strippingCommentsAndNewlines: Bool = true) throws -> Token {
         if isFinished {
-            throw Error.prematureStreamEnd(current)
+            throw Error.unexpectedStreamEnd(current)
         }
         if check(lexeme) {
             let token = advance()
@@ -136,6 +136,12 @@ public final class Parser {
             return token
         }
         throw Error.unexpectedToken(current, lexeme)
+    }
+    
+    private func location(startingAt start: Token) -> Source.Location {
+        let begin = start.location
+        let end = previous.location
+        return begin.lowerBound..<end.upperBound
     }
     
     public func parse() throws -> [AST.Expression] {
@@ -164,16 +170,16 @@ public final class Parser {
         throw Error.invalidArgumentName(current)
     }
     
-    private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
+    private func parseBinary(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
             guard let binary = AST.BinaryOperator(current.lexeme), binary.precedence >= precedence else {
                 return lhs
             }
             let _ = try consume(binary.lexeme)
-            var rhs = try parseUnaryOperator()
+            var rhs = try parseUnary()
             if let nextBinary = AST.BinaryOperator(current.lexeme), binary.precedence < nextBinary.precedence {
-                rhs = try parseBinaryOperator(rhs, binary.precedence + 1)
+                rhs = try parseBinary(rhs, binary.precedence + 1)
             }
             lhs = .binary(lhs, binary, rhs)
         }
@@ -184,89 +190,90 @@ public final class Parser {
         return .primary(.boolean(value))
     }
 
-    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {        
+    private func parseCall(_ lhs: AST.Expression) throws -> AST.Expression {
         switch current.lexeme {
         case .parenLeft:
             let _ = try consume(.parenLeft)
             var parameters: [AST.Identifier: AST.Expression] = [:]
             while !check(.parenRight) {
+                let mark = current
                 let name = try parseArgumentName()
                 let _ = try consume(.colon)
                 let value = try parseValue()
                 if parameters[name] == nil {
                     parameters[name] = value
                 } else {
-                    throw Error.degenerateArgumentName(current, name)
+                    throw Error.degenerateArgumentName(location(startingAt:mark), name)
                 }
                 if check(.comma) {
                     let _ = try consume(.comma)
                     if check(.parenRight) {
-                        throw Error.trailingToken(current)
+                        throw Error.trailingComma(previous.location)
                     }
                 }
             }
             let _ = try consume(.parenRight)
-            return try parseCall(.call(lvalue, parameters))
+            return try parseCall(.call(lhs, parameters))
         case .squareLeft:
             let _ = try consume(.squareLeft)
             let index = try parseIndex()
             let _ = try consume(.squareRight)
-            return try parseCall(.get(lvalue, index))
+            return try parseCall(.get(lhs, index))
         default:
-            return lvalue
+            return lhs
         }
     }
     
     private func parseExpression() throws -> AST.Expression {
-        let unary = try parseUnaryOperator()
-        let lvalue = try parseBinaryOperator(unary)
+        let mark = current
+        let unary = try parseUnary()
+        let lhs = try parseBinary(unary)
         if check(.colon) {
             let _ = try consume(.colon)
-            
-            /// TODO: Does this fix the r-value issue
-            let rvalue = try parseValue()
-//            let rvalue = try parseExpression()
-            
-            switch lvalue {
-            case .get(let llvalue, let index):
-                return .set(llvalue, index, rvalue)
-            case .primary(let primary):
-                switch primary {
-                case .identifier(let identifier):
-                    return .assign(identifier, rvalue)
+            /// Right-hand side must be a value type (not a setter or assignment)
+            let rhs = try parseValue()
+            switch lhs {
+            case .get(let llhs, let index):
+                return .set(llhs, index, rhs)
+            case .primary(let value):
+                switch value {
+                case .identifier(let name):
+                    return .assign(name, rhs)
                 default:
-                    throw Error.invalidAssignment(current)
+                    throw Error.invalidAssignment(location(startingAt:mark))
                 }
             default:
-                throw Error.invalidAssignment(current)
+                throw Error.invalidAssignment(location(startingAt:mark))
             }
         }
-        return lvalue
+        return lhs
     }
     
     private func parseFunction() throws -> AST.Expression {
         let _ = try consume(.at)
         let _ = try consume(.parenLeft)
-        /// Arguments
-        var arguments: [AST.Identifier] = []
+        var arguments: Set<AST.Identifier> = []
         while !check(.parenRight) {
             switch current.lexeme {
             case .identifier(let name):
                 let _ = try consume(.identifier(name))
-                arguments.append(name)
+                if arguments.contains(name) {
+                    throw Error.degenerateArgumentName(previous.location, name)
+                } else {
+                    arguments.insert(name)
+                }
             default:
                 throw Error.invalidArgumentName(current)
             }
             if check(.comma) {
                 let _ = try consume(.comma)
                 if check(.parenRight) {
-                    throw Error.trailingToken(current)
+                    throw Error.trailingComma(previous.location)
                 }
             }
         }
         let _ = try consume(.parenRight)
         let _ = try consume(.curlyLeft)
-        /// Body
         var body: [AST.Expression] = []
         while !check(.curlyRight) {
             body.append(try parseExpression())
@@ -275,7 +282,7 @@ public final class Parser {
             }
         }
         let _ = try consume(.curlyRight)
-        return .primary(.function(arguments, body))
+        return .primary(.function(Array(arguments), body))
     }
 
     private func parseGroup() throws -> AST.Expression {
@@ -291,11 +298,11 @@ public final class Parser {
     }
     
     private func parseIndex() throws -> AST.Index {
-        let token = current
+        let mark = current
         let index = try parseExpression()
         switch index {
         case .assign(_, _):
-            throw Error.invalidIndex(token)
+            throw Error.invalidIndex(location(startingAt:mark))
         case .binary(_, _, _):
             return index
         case .call(_, _):
@@ -305,7 +312,7 @@ public final class Parser {
         case .primary(_):
             return index
         case .set(_, _, _):
-            throw Error.invalidIndex(token)
+            throw Error.invalidIndex(location(startingAt:mark))
         case .unary(_, _):
             return index
         }
@@ -332,7 +339,7 @@ public final class Parser {
             if check(.comma) {
                 let _ = try consume(.comma)
                 if check(.squareRight) {
-                    throw Error.trailingToken(current)
+                    throw Error.trailingComma(previous.location)
                 }
             }
         }
@@ -344,18 +351,19 @@ public final class Parser {
         let _ = try consume(.curlyLeft)
         var elements: [AST.Identifier: AST.Expression] = [:]
         while !check(.curlyRight) {
+            let mark = current
             let key = try parseMapKey()
             let _ = try consume(.colon)
             let value = try parseValue()
             if elements[key] == nil {
                 elements[key] = value
             } else {
-                throw Error.degenerateMapKey(current, key)
+                throw Error.degenerateMapKey(location(startingAt:mark), key)
             }
             if check(.comma) {
                 let _ = try consume(.comma)
                 if check(.curlyRight) {
-                    throw Error.trailingToken(current)
+                    throw Error.trailingComma(previous.location)
                 }
             }
         }
@@ -389,7 +397,7 @@ public final class Parser {
         case .at:
             return try parseFunction()
         default:
-            throw Error.unsupportedPrimary(current)
+            throw Error.invalidSyntax(current)
         }
     }
     
@@ -398,21 +406,20 @@ public final class Parser {
         return .primary(.string(value))
     }
     
-    private func parseUnaryOperator() throws -> AST.Expression {
+    private func parseUnary() throws -> AST.Expression {
         guard let unary = AST.UnaryOperator(current.lexeme) else {
-            let primary = try parsePrimary()
-            return try parseCall(primary)
+            return try parseCall(try parsePrimary())
         }
         let _ = try consume(unary.lexeme)
-        return .unary(unary, try parseUnaryOperator())
+        return .unary(unary, try parseUnary())
     }
 
     private func parseValue() throws -> AST.Expression {
-        let token = current
+        let mark = current
         let value = try parseExpression()
         switch value {
         case .assign(_, _):
-            throw Error.invalidValue(token)
+            throw Error.invalidValue(location(startingAt:mark))
         case .binary(_, _, _):
             return value
         case .call(_, _):
@@ -422,7 +429,7 @@ public final class Parser {
         case .primary(_):
             return value
         case .set(_, _, _):
-            throw Error.invalidValue(token)
+            throw Error.invalidValue(location(startingAt:mark))
         case .unary(_, _):
             return value
         }
@@ -431,6 +438,10 @@ public final class Parser {
     private func reset() {
         expressions.removeAll(keepingCapacity:true)
         currentIndex = tokens.startIndex
+    }
+    
+    private var previous: Token {
+        return tokens[currentIndex - 1]
     }
     
     private var current: Token {
