@@ -27,49 +27,112 @@
 
 import Foundation
 
-public struct Dali {
+public final class Dali {
+
+    public enum ANSIColor: String {
+        case black      = "\u{001B}[0;30m"
+        case red        = "\u{001B}[0;31m"
+        case green      = "\u{001B}[0;32m"
+        case yellow     = "\u{001B}[0;33m"
+        case blue       = "\u{001B}[0;34m"
+        case magenta    = "\u{001B}[0;35m"
+        case cyan       = "\u{001B}[0;36m"
+        case white      = "\u{001B}[0;37m"
+
+        public func apply(_ item: Any) -> String {
+            return "\(rawValue)\(item)\u{001B}[0;0m"
+        }
+    }
+
+    /// Checks whether Xcode spawned the process (i.e. ANSI color codes not supported)
+    public enum Environment: CustomStringConvertible {
+        case terminal
+        case xcode
+        
+        public init() {
+            let environment = ProcessInfo.processInfo.environment
+            let xcode = environment["XPC_SERVICE_NAME"]?.range(of:"Xcode") != nil
+            self = xcode ? .xcode : .terminal
+        }
+        
+        public var description: String {
+            switch self {
+            case .terminal:
+                return "iterm"
+            case .xcode:
+                return "xcode"
+            }
+        }
+    }
     
+    public enum Input: CustomStringConvertible {
+        case file(String)
+        case stdin
+        case usage
+        
+        public var description: String {
+            switch self {
+            case .file(let value):
+                return "file: '\(value)'"
+            case .stdin:
+                return "<stdin>"
+            case .usage:
+                return "dali <script>"
+            }
+        }
+    }
+
     public enum Status {
         case success
         case failure
     }
     
-    /// Compile a program from a source string
-    public static func compile(_ source: Source, supportsColor: Bool) {
-        let scanner = Scanner(source)
+    public init(_ args: [String], env: Environment = Environment()) {
+        self.env = env
+        if args.count == 1 {
+            self.input = .stdin
+        } else if args.count == 2 {
+            self.input = .file(args[1])
+        } else {
+            self.input = .usage
+        }
+    }
+    
+    public func compile(_ source: Source) {
         do {
+            let scanner = Scanner(source)
             let tokens = try scanner.scan()
             do {
                 let parser = Parser(tokens)
                 let expressions = try parser.parse()
                 for expression in expressions {
-                    log(AST.pretty(expression, supportsColor:supportsColor))
+                    print(format(expression))
                 }
             } catch let issue as Parser.Error {
-                error(source, tokens, issue)
-            } catch _ {
-                fatalError("0xdeadbeef")
+                error(issue, in:source)
+            } catch let other {
+                fatalError("Expected a ParserError: \(other)")
             }
         } catch let issue as Scanner.Error {
-            error(source, issue)
-        } catch _ {
-            fatalError("0xdeadbeef")
+            error(issue, in:source)
+        } catch let other {
+            fatalError("Expected a ScannerError: \(other)")
         }
     }
     
-    public static func error(_ string: String, terminator: String = "\n") {
-        print(string, separator:"", terminator:terminator)
+    private func error(_ message: String) {
+        print(message, color:.red)
+    }
+    
+    private func error(_ issue: Parser.Error, in source: Source) {
+        print(format(issue, in:source))
+    }
+    
+    private func error(_ issue: Scanner.Error, in source: Source) {
+        print(format(issue, in:source))
     }
 
-    public static func error(_ source: Source, _ issue: Scanner.Error) {
-        error(source.format(error:"SyntaxError: \(issue.description)", at:issue.location))
-    }
-    
-    public static func error(_ source: Source, _ tokens: [Token], _ issue: Parser.Error) {
-        error(source.format(error:"SyntaxError: \(issue.description)", using:tokens, at:issue.location))
-    }
-    
-    public static func exit(with status: Status) -> Never {
+    public func exit(with status: Status) -> Never {
         switch status {
         case .success:
             Darwin.exit(EXIT_SUCCESS)
@@ -78,48 +141,235 @@ public struct Dali {
         }
     }
 
-    public static func log(_ string: String, terminator: String = "\n") {
-        print(string, separator:"", terminator:terminator)
+    private func format(_ value: AST.Expression) -> String {
+        switch value {
+        case .assign(let key, let value):
+            var output = ""
+            output += format(key)
+            output += ":"
+            output += " "
+            output += format(value)
+            return output
+        case .binary(let lhs, let op, let rhs):
+            var output = ""
+            output += "("
+            output += format(lhs)
+            output += " "
+            output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
+            output += " "
+            output += format(rhs)
+            output += ")"
+            return output
+        case .call(let lhs, let args):
+            var output = ""
+            output += format(lhs)
+            output += "("
+            output += args.reduce("") {
+                let key = format($0.1.0)
+                let value = format($0.1.1)
+                return $0.0 + key + ": " + value + ", "
+            }
+            if !args.isEmpty {
+                let _ = output.unicodeScalars.popLast()
+                let _ = output.unicodeScalars.popLast()
+            }
+            output += ")"
+            return output
+        case .get(let lhs, let index):
+            var output = ""
+            output += format(lhs)
+            output += "["
+            output += format(index)
+            output += "]"
+            return output
+        case .primary(let primary):
+            return format(primary)
+        case .set(let lhs, let index, let rhs):
+            var output = ""
+            output += format(lhs)
+            output += "["
+            output += format(index)
+            output += "]"
+            output += ":"
+            output += " "
+            output += format(rhs)
+            return output
+        case .unary(let op, let rhs):
+            var output = ""
+            output += "("
+            output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
+            output += format(rhs)
+            output += ")"
+            return output
+        }
     }
     
-    /// Read-Eval-Print Loop
-    public static func repl(supportsColor: Bool) -> Never {
-        log("-------------------------------------")
-        log(" dali REPL v0.1.0 (press ^C to exit) ")
-        log("-------------------------------------")
-        var lines = ""
-        while true {
-            log(">>>", terminator:" ")
+    private func format(_ value: AST.Identifier) -> String {
+        return useColor ? ANSIColor.cyan.apply(value) : value
+    }
+    
+    private func format(_ value: AST.Primary) -> String {
+        switch value {
+        case .boolean(let value):
+            return useColor ? ANSIColor.yellow.apply(value.description) : value.description
+        case .function(let args, let body):
+            var output = ""
+            output += useColor ? ANSIColor.green.apply("@") : "@"
+            output += "("
+            output += args.reduce("") {
+                return $0.0 + format($0.1) + ", "
+            }
+            if !args.isEmpty {
+                let _ = output.unicodeScalars.popLast()
+                let _ = output.unicodeScalars.popLast()
+            }
+            output += "){"
+            output += body.reduce("") {
+                return $0.0 + format($0.1) + ", "
+            }
+            if !body.isEmpty {
+                let _ = output.unicodeScalars.popLast()
+                let _ = output.unicodeScalars.popLast()
+            }
+            output += "}"
+            return output
+        case .identifier(let value):
+            return format(value)
+        case .keyword(let value):
+            return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
+        case .list(let values):
+            var output = ""
+            output += "["
+            output += values.reduce("") {
+                return $0.0 + format($0.1) + ", "
+            }
+            if !values.isEmpty {
+                let _ = output.unicodeScalars.popLast()
+                let _ = output.unicodeScalars.popLast()
+            }
+            output += "]"
+            return output
+        case .map(let values):
+            var output = ""
+            output += "{"
+            output += values.reduce("") {
+                let key = format($0.1.0)
+                let value = format($0.1.1)
+                return $0.0 + key + ": " + value + ", "
+            }
+            if !values.isEmpty {
+                let _ = output.unicodeScalars.popLast()
+                let _ = output.unicodeScalars.popLast()
+            }
+            output += "}"
+            return output
+        case .number(let value):
+            return useColor ? ANSIColor.blue.apply(value.description) : value.description
+        case .string(let value):
+            return useColor ? ANSIColor.magenta.apply("\"" + value + "\"") : "\"" + value + "\""
+        }
+    }
+    
+    private func format(_ issue: Parser.Error, in source: Source) -> String {
+        return format(issue.description, in:source, at:issue.location)
+        
+//        var lineStartIndex = issue.location.lowerBound
+//        if _source[lineStartIndex] == "\n" && lineStartIndex != _source.startIndex {
+//            lineStartIndex = _source.index(before:lineStartIndex)
+//        }
+//        while _source[lineStartIndex] != "\n" && lineStartIndex != _source.startIndex {
+//            lineStartIndex = _source.index(before:lineStartIndex)
+//        }
+//        var truncatedSource = _source.extract(_source.startIndex..<lineStartIndex)
+//        if useColor && !truncatedSource.isEmpty {
+//            let colors: [Token.Category: Color] = [
+//                .boolean: .yellow,
+//                .comment: .black,
+//                .keyword: .yellow,
+//                .number: .blue,
+//                .operator: .green,
+//                .string: .magenta,
+//                .variable: .cyan
+//            ]
+//            for token in tokens.reversed() {
+//                if token.location.upperBound <= lineStartIndex {
+//                    let category = token.lexeme.category
+//                    let substring = truncatedSource.unicodeScalars[token.location]
+//                    if let color = colors[category] {
+//                        truncatedSource.unicodeScalars.replaceSubrange(token.location, with:color.apply(substring).unicodeScalars)
+//                    }
+//                }
+//            }
+//        }
+//        return (truncatedSource + "\n" + format(error:message, at:location)).trimmingCharacters(in:.newlines)
+        
+    }
+
+    private func format(_ issue: Scanner.Error, in source: Source) -> String {
+        return format(issue.description, in:source, at:issue.location)
+    }
+    
+    private func format(_ message: String, in source: Source, at location: Source.Location) -> String {
+        let row = source.line(for:location)
+        let col = source.columns(for:location)
+        var output = ""
+        output += "file: \(input), line: \(row), "
+        output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
+        output += source.extractLine(location) + "\n"
+        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
+        output += "SyntaxError: \(message)"
+        return useColor ? ANSIColor.red.apply(output) : output
+    }
+    
+    private func print(_ message: String, color: ANSIColor? = nil, terminator: String = "\n") {
+        if let kuler = color, useColor {
+            Swift.print(kuler.apply(message), separator:"", terminator:terminator)
+        } else {
+            Swift.print(message, separator:"", terminator:terminator)
+        }
+    }
+    
+    public func run() -> Never {
+        switch input {
+        case .file(let name):
+            do {
+                let source = Source(try String(contentsOfFile:name, encoding:.utf8))
+                compile(source)
+                exit(with:.success)
+            } catch let issue {
+                error("ScriptError: \(issue.localizedDescription)")
+                exit(with:.failure)
+            }
+        case .stdin:
+            print("-------------------------------------")
+            print(" dali REPL v0.1.0 (press ^C to exit) ")
+            print("-------------------------------------")
+            var buffer = ""
             while true {
-                guard let line = readLine(strippingNewline:false) else { break }
-                lines += line
-                let source = Source(input:.stdin, source:lines, supportsColor:supportsColor)
-                if source.checkParentheses() {
-                    compile(source, supportsColor:supportsColor)
-                    lines.removeAll(keepingCapacity:true)
-                    break
-                } else {
-                    log("...", terminator:" ")
+                print(">>>", terminator:" ")
+                while true {
+                    guard let line = readLine(strippingNewline:false) else { break }
+                    buffer += line
+                    let source = Source(buffer)
+                    if source.needsContinuation {
+                        print("...", terminator:" ")
+                    } else {
+                        compile(source)
+                        buffer.removeAll(keepingCapacity:true)
+                        break
+                    }
                 }
             }
-        }
-    }
-    
-    /// Run a script
-    public static func script(_ name: String, supportsColor: Bool) {
-        do {
-            let source = try String(contentsOfFile:name, encoding:.utf8)
-            compile(Source(input:.file(name), source:source, supportsColor:supportsColor), supportsColor:supportsColor)
+        case .usage:
+            print("Usage: \(input)")
             exit(with:.success)
-        } catch let issue {
-            error("ScriptError: \(issue.localizedDescription)")
-            exit(with:.failure)
         }
     }
     
-    /// Print the usage and exit
-    public static func usage() {
-        log("Usage: dali <script>")
-        exit(with:.success)
+    private var useColor: Bool {
+        return env == .terminal
     }
+    
+    private let env: Environment
+    private let input: Input
 }

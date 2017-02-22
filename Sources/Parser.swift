@@ -167,10 +167,7 @@ public final class Parser {
     private func parseBinaryOperator(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
         var lhs = lhs
         while true {
-            guard let binary = AST.BinaryOperator(current.lexeme) else {
-                return lhs
-            }
-            if binary.precedence < precedence {
+            guard let binary = AST.BinaryOperator(current.lexeme), binary.precedence >= precedence else {
                 return lhs
             }
             let _ = try consume(binary.lexeme)
@@ -187,7 +184,7 @@ public final class Parser {
         return .primary(.boolean(value))
     }
 
-    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {
+    private func parseCall(_ lvalue: AST.Expression) throws -> AST.Expression {        
         switch current.lexeme {
         case .parenLeft:
             let _ = try consume(.parenLeft)

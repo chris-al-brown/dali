@@ -27,14 +27,7 @@
 
 import Foundation
 
-/// Checks whether Xcode spawned the process (i.e. ANSI color codes not supported)
-let xcode = ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"]?.range(of:"Xcode") != nil
-
+/// Start the program
 let args = CommandLine.arguments
-if args.count == 1 {
-    Dali.repl(supportsColor:!xcode)
-} else if args.count == 2 {
-    Dali.script(args[1], supportsColor:!xcode)
-} else {
-    Dali.usage()
-}
+let dali = Dali(args)
+dali.run()

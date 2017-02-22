@@ -29,21 +29,24 @@ import Foundation
 
 public struct Token {
     
-    public enum Category {
-        case boolean
-        case comment
-        case keyword
-        case number
-        case `operator`
-        case punctuation
-        case string
-        case variable
-        case whitespace
-    }
-    
     public enum Keyword: String {
-        case pi = "pi"
         case e  = "e"
+        case pi = "pi"
+        
+        public static func getLexeme(for string: String) -> Lexeme? {
+            switch string {
+            case "true":
+                return .boolean(true)
+            case "false":
+                return .boolean(false)
+            case "e":
+                return .keyword(.e)
+            case "pi":
+                return .keyword(.pi)
+            default:
+                return nil
+            }
+        }
     }
     
     public enum Lexeme: Equatable {
@@ -87,7 +90,7 @@ public struct Token {
         case identifier(String)     /// my_variable
         
         /// Keywords
-        case keyword(Keyword)       /// this, pi, e, etc.
+        case keyword(Keyword)       /// pi, e, width, height, etc.
         
         /// End of line
         case newline                /// newline
@@ -153,36 +156,6 @@ public struct Token {
                 return true
             default:
                 return false
-            }
-        }
-        
-        public static var keywords: [String: Lexeme] = [
-            "true": .boolean(true),
-            "false": .boolean(false),
-            "e": .keyword(.e),
-            "pi": .keyword(.pi)
-        ]
-        
-        public var category: Category {
-            switch self {
-            case .comma, .curlyLeft, .curlyRight, .parenLeft, .parenRight, .squareLeft, .squareRight:
-                return .punctuation
-            case .colon, .plus, .minus, .star, .slash, .equal, .carrotLeft, .carrotRight, .exclamation, .ampersand, .bar:
-                return .operator
-            case .hash:
-                return .comment
-            case .boolean(_):
-                return .boolean
-            case .number(_):
-                return .number
-            case .string(_):
-                return .string
-            case .identifier(_):
-                return .variable
-            case .at, .keyword(_):
-                return .keyword
-            case .newline, .end:
-                return .whitespace
             }
         }
     }

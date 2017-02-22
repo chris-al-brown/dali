@@ -29,77 +29,20 @@ import Foundation
 
 public struct Source: BidirectionalCollection {
     
-    /// ANSI colors for pretty printing
-    public enum Color: String {
-        case black      = "\u{001B}[0;30m"
-        case red        = "\u{001B}[0;31m"
-        case green      = "\u{001B}[0;32m"
-        case yellow     = "\u{001B}[0;33m"
-        case blue       = "\u{001B}[0;34m"
-        case magenta    = "\u{001B}[0;35m"
-        case cyan       = "\u{001B}[0;36m"
-        case white      = "\u{001B}[0;37m"
-        
-        public func apply(_ item: Any) -> String {
-            return "\(rawValue)\(item)\u{001B}[0;0m"
-        }
-    }
-    
     public typealias Index = String.UnicodeScalarIndex
 
-    public enum Input: CustomStringConvertible {
-        case file(String)
-        case stdin
-        
-        public var description: String {
-            switch self {
-            case .file(let value):
-                return "'\(value)'"
-            case .stdin:
-                return "<stdin>"
-            }
-        }
-    }
-    
     public typealias Location = Range<Index>
 
     public typealias Scalar = UnicodeScalar
     
-    public init(input: Input, source: String, supportsColor: Bool) {
-        self.input = input
+    public init(_ source: String) {
         self.storage = source
-        self.supportsColor = supportsColor
     }
 
     public subscript(position: Index) -> Scalar {
         return storage.unicodeScalars[position]
     }
     
-    public func checkParentheses() -> Bool {
-        var curly = 0
-        var round = 0
-        var square = 0
-        for scalar in self {
-            switch scalar {
-            case "{":
-                curly += 1
-            case "}":
-                curly -= 1
-            case "(":
-                round += 1
-            case ")":
-                round -= 1
-            case "[":
-                square += 1
-            case "]":
-                square -= 1
-            default:
-                break
-            }
-        }
-        return curly == 0 && round == 0 && square == 0
-    }
-
     public func columns(for location: Location) -> ClosedRange<Int> {
         var currentIndex = location.lowerBound
         /// Fix for eol to be at end of a line
@@ -136,50 +79,6 @@ public struct Source: BidirectionalCollection {
         return String(storage.unicodeScalars[sindex..<eindex]).trimmingCharacters(in:.newlines)
     }
 
-    public func format(error message: String, using tokens: [Token], at location: Location) -> String {
-        var lineStartIndex = location.lowerBound
-        if self[lineStartIndex] == "\n" && lineStartIndex != startIndex {
-            lineStartIndex = index(before:lineStartIndex)
-        }
-        while self[lineStartIndex] != "\n" && lineStartIndex != startIndex {
-            lineStartIndex = index(before:lineStartIndex)
-        }
-        var truncatedSource = extract(startIndex..<lineStartIndex)
-        if supportsColor && !truncatedSource.isEmpty {
-            let colors: [Token.Category: Color] = [
-                .boolean: .yellow,
-                .comment: .black,
-                .keyword: .yellow,
-                .number: .blue,
-                .operator: .green,
-                .string: .magenta,
-                .variable: .cyan
-            ]
-            for token in tokens.reversed() {
-                if token.location.upperBound <= lineStartIndex {
-                    let category = token.lexeme.category
-                    let substring = truncatedSource.unicodeScalars[token.location]
-                    if let color = colors[category] {
-                        truncatedSource.unicodeScalars.replaceSubrange(token.location, with:color.apply(substring).unicodeScalars)
-                    }
-                }
-            }
-        }
-        return (truncatedSource + "\n" + format(error:message, at:location)).trimmingCharacters(in:.newlines)
-    }
-    
-    public func format(error message: String, at location: Location) -> String {
-        let row = line(for:location)
-        let col = columns(for:location)
-        var output = ""
-        output += "file: \(input), line: \(row), "
-        output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
-        output += extractLine(location) + "\n"
-        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
-        output += message
-        return supportsColor ? Color.red.apply(output) : output
-    }
-
     public func line(for location: Location) -> Int {
         var line = 1
         var currentIndex = startIndex
@@ -200,6 +99,31 @@ public struct Source: BidirectionalCollection {
         return storage.unicodeScalars.index(before:i)
     }
     
+    public var needsContinuation: Bool {
+        var curly = 0
+        var round = 0
+        var square = 0
+        for scalar in self {
+            switch scalar {
+            case "{":
+                curly += 1
+            case "}":
+                curly -= 1
+            case "(":
+                round += 1
+            case ")":
+                round -= 1
+            case "[":
+                square += 1
+            case "]":
+                square -= 1
+            default:
+                break
+            }
+        }
+        return !(curly == 0 && round == 0 && square == 0)
+    }
+    
     public var startIndex: Index {
         return storage.unicodeScalars.startIndex
     }
@@ -208,7 +132,5 @@ public struct Source: BidirectionalCollection {
         return storage.unicodeScalars.endIndex
     }
     
-    private let input: Input
     private let storage: String
-    private let supportsColor: Bool
 }
