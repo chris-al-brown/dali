@@ -35,12 +35,13 @@ public struct Source: BidirectionalCollection {
 
     public typealias Scalar = UnicodeScalar
     
-    public init(_ source: String) {
-        self.storage = source
+    public init(_ source: String, input file: String) {
+        self.buffer = source
+        self.file = file
     }
 
     public subscript(position: Index) -> Scalar {
-        return storage.unicodeScalars[position]
+        return buffer.unicodeScalars[position]
     }
     
     public func columns(for location: Location) -> ClosedRange<Int> {
@@ -60,7 +61,7 @@ public struct Source: BidirectionalCollection {
     }
 
     public func extract(_ location: Location) -> String {
-        return String(storage.unicodeScalars[location])
+        return String(buffer.unicodeScalars[location])
     }
     
     public func extractLine(_ location: Location) -> String {
@@ -76,7 +77,7 @@ public struct Source: BidirectionalCollection {
         while self[eindex] != "\n" && eindex != endIndex {
             eindex = index(after:eindex)
         }
-        return String(storage.unicodeScalars[sindex..<eindex]).trimmingCharacters(in:.newlines)
+        return String(buffer.unicodeScalars[sindex..<eindex]).trimmingCharacters(in:.newlines)
     }
 
     public func line(for location: Location) -> Int {
@@ -92,11 +93,15 @@ public struct Source: BidirectionalCollection {
     }
     
     public func index(after i: Index) -> Index {
-        return storage.unicodeScalars.index(after:i)
+        return buffer.unicodeScalars.index(after:i)
     }
     
     public func index(before i: Index) -> Index {
-        return storage.unicodeScalars.index(before:i)
+        return buffer.unicodeScalars.index(before:i)
+    }
+    
+    public var input: String {
+        return file
     }
     
     public var needsContinuation: Bool {
@@ -125,12 +130,13 @@ public struct Source: BidirectionalCollection {
     }
     
     public var startIndex: Index {
-        return storage.unicodeScalars.startIndex
+        return buffer.unicodeScalars.startIndex
     }
     
     public var endIndex: Index {
-        return storage.unicodeScalars.endIndex
+        return buffer.unicodeScalars.endIndex
     }
     
-    private let storage: String
+    private let buffer: String
+    private let file: String
 }

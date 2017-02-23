@@ -27,6 +27,16 @@
 
 import Foundation
 
+public protocol ASTExpressionVisitor {
+    associatedtype ExpressionValue
+    func visit(_ expression: AST.Expression) -> ExpressionValue
+}
+
+public protocol ASTPrimaryVisitor {
+    associatedtype PrimaryValue
+    func visit(_ primary: AST.Primary) -> PrimaryValue
+}
+
 public struct AST {
 
     public enum BinaryOperator {
@@ -137,6 +147,10 @@ public struct AST {
 
         /// !true
         case unary(UnaryOperator, Expression)
+        
+        public func accept<T: ASTExpressionVisitor>(_ visitor: T) -> T.ExpressionValue {
+            return visitor.visit(self)
+        }
     }
     
     public typealias Identifier = String
@@ -168,6 +182,10 @@ public struct AST {
 
         /// "message"
         case string(String)
+        
+        public func accept<T: ASTPrimaryVisitor>(_ visitor: T) -> T.PrimaryValue {
+            return visitor.visit(self)
+        }
     }
     
     public typealias Keyword = Token.Keyword
