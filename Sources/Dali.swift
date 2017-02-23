@@ -66,18 +66,27 @@ public final class Dali {
     }
     
     public enum Input: CustomStringConvertible {
+        case debug
         case file(String)
         case stdin
         case usage
         
         public var description: String {
             switch self {
+            case .debug:
+                return "<\(DevURandom())>"
             case .file(let value):
                 return "file: '\(value)'"
             case .stdin:
                 return "<stdin>"
             case .usage:
-                return "dali <script>"
+                var output = ""
+                output += "Usage:" + "\n"
+                output += "  " + "dali" + "\n"
+                output += "  " + "dali <script>" + "\n"
+                output += "  " + "dali --debug" + "\n"
+                output += "  " + "dali --help" + "\n"
+                return output
             }
         }
     }
@@ -92,13 +101,21 @@ public final class Dali {
         if args.count == 1 {
             self.input = .stdin
         } else if args.count == 2 {
-            self.input = .file(args[1])
+            switch args[1] {
+            case "--debug":
+                self.input = .debug
+            case "--help":
+                self.input = .usage
+            default:
+                self.input = .file(args[1])
+            }
         } else {
+            Swift.print(args)
             self.input = .usage
         }
     }
     
-    public func compile(_ source: Source) {
+    public func compile(_ source: Source) -> Status {
         do {
             let scanner = Scanner(source)
             let tokens = try scanner.scan()
@@ -108,13 +125,16 @@ public final class Dali {
                 for expression in expressions {
                     print(format(expression))
                 }
+                return .success
             } catch let issue as Parser.Error {
                 error(issue, in:source)
+                return .failure
             } catch let other {
                 fatalError("Expected a ParserError: \(other)")
             }
         } catch let issue as Scanner.Error {
             error(issue, in:source)
+            return .failure
         } catch let other {
             fatalError("Expected a ScannerError: \(other)")
         }
@@ -224,11 +244,11 @@ public final class Dali {
             output += body.reduce("") {
                 return $0.0 + format($0.1) + ", "
             }
-            output += "}"
             if !body.isEmpty {
                 let _ = output.unicodeScalars.popLast()
                 let _ = output.unicodeScalars.popLast()
             }
+            output += "}"
             return output
         case .identifier(let value):
             return useColor ? ANSIColor.cyan.apply(value) : value
@@ -295,13 +315,79 @@ public final class Dali {
         }
     }
     
+    private func random(_ xoroshiro: inout Xoroshiro128Plus, complexity: Int) -> AST.Expression {
+        switch complexity {
+        case 0:
+            return .primary(random(&xoroshiro, complexity:0))
+        default:
+            let newComplexity = complexity - 1
+            switch xoroshiro.randomDouble() {
+            case 0.0..<0.2:
+                return .assign("age", random(&xoroshiro, complexity:newComplexity))
+            case 0.2..<0.4:
+                return .unary(.not, random(&xoroshiro, complexity:newComplexity))
+            case 0.4..<0.6:
+                let index: AST.Index = random(&xoroshiro, complexity:newComplexity)
+                if xoroshiro.randomBool() {
+                    return .get(random(&xoroshiro, complexity:newComplexity), index)
+                } else {
+                    return .set(random(&xoroshiro, complexity:newComplexity), index, random(&xoroshiro, complexity:newComplexity))
+                }
+            case 0.6..<0.8:
+                return .binary(random(&xoroshiro, complexity:newComplexity), .add, random(&xoroshiro, complexity:newComplexity))
+            default:
+                return .call(random(&xoroshiro, complexity:newComplexity), ["x": random(&xoroshiro, complexity:newComplexity), "y": random(&xoroshiro, complexity:newComplexity)])
+            }
+        }
+    }
+
+    private func random(_ xoroshiro: inout Xoroshiro128Plus, complexity: Int) -> AST.Primary {
+        switch complexity {
+        case 0:
+            switch xoroshiro.randomDouble() {
+            case 0.00..<0.20:
+                return .boolean(xoroshiro.randomBool())
+            case 0.20..<0.40:
+                return xoroshiro.randomBool() ? .identifier("person") : .identifier("circle")
+            case 0.40..<0.60:
+                return xoroshiro.randomBool() ? .keyword(.pi) : .keyword(.e)
+            case 0.60..<0.80:
+                return .number(xoroshiro.randomDouble())
+            default:
+                return .string("Hello world")
+            }
+        default:
+            let newComplexity = complexity - 1
+            switch xoroshiro.randomDouble() {
+            case 0.00..<0.33:
+                return .function(["x", "y"], [random(&xoroshiro, complexity:newComplexity)])
+            case 0.33..<0.66:
+                return .list([random(&xoroshiro, complexity:newComplexity)])
+            default:
+                return .map(["name": random(&xoroshiro, complexity:newComplexity)])
+            }
+        }
+    }
+    
     public func run() -> Never {
         switch input {
+        case .debug:
+            var xoroshiro = Xoroshiro128Plus()
+            var result: Status = .failure
+            while result == .failure {
+                let expression: AST.Expression = random(&xoroshiro, complexity:2)
+                let current = env
+                env = .xcode
+                let source = Source(format(expression))
+                env = current
+                result = compile(source)
+            }
+            exit(with:result)
         case .file(let name):
             do {
                 let source = Source(try String(contentsOfFile:name, encoding:.utf8))
-                compile(source)
-                exit(with:.success)
+                let result = compile(source)
+                exit(with:result)
             } catch let issue {
                 error("ScriptError: \(issue.localizedDescription)")
                 exit(with:.failure)
@@ -322,22 +408,22 @@ public final class Dali {
                     if source.needsContinuation {
                         print(tab, terminator:" ")
                     } else {
-                        compile(source)
+                        let _ = compile(source)
                         buffer.removeAll(keepingCapacity:true)
                         break
                     }
                 }
             }
         case .usage:
-            print("Usage: \(input)")
+            print("\(input)")
             exit(with:.success)
         }
     }
-    
+
     private var useColor: Bool {
         return env == .terminal
     }
     
-    private let env: Environment
+    private var env: Environment
     private let input: Input
 }
