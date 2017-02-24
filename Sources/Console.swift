@@ -69,7 +69,7 @@ public struct Console {
         }
     }
     
-    public struct Formatter: ASTExpressionVisitor, ASTPrimaryVisitor {
+    public struct Formatter: ASTVisitor {
         
         public init(useColor: Bool) {
             self.useColor = useColor
@@ -138,7 +138,7 @@ public struct Console {
             }
         }
         
-        public func visit(_ primary: AST.Primary) -> String {
+        private func visit(_ primary: AST.Primary) -> String {
             switch primary {
             case .boolean(let value):
                 return useColor ? ANSIColor.yellow.apply(value.description) : value.description

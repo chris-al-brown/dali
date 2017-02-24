@@ -63,24 +63,22 @@ public final class Dali {
     public func compile(_ source: Source) -> Status {
         do {
             let scanner = Scanner(source)
-            let tokens = try scanner.scan()
-            do {
-                let parser = Parser(tokens)
-                let expressions = try parser.parse()
-                expressions.forEach { console.log($0) }
-                return .success
-            } catch let issue as Parser.Error {
-                console.error(issue, in:source)
-                return .failure
-            } catch let other {
-                fatalError("Expected a ParserError: \(other)")
-            }
+            let parser = Parser(try scanner.scan())
+            let validator = Validator(try parser.parse())
+            let expressions = try validator.validate()
+            expressions.forEach { console.log($0) }
+            return .success
         } catch let issue as Scanner.Error {
             console.error(issue, in:source)
-            return .failure
-        } catch let other {
-            fatalError("Expected a ScannerError: \(other)")
+        } catch let issue as Parser.Error {
+            console.error(issue, in:source)
+        } catch let issue as Validator.Error {
+            /// TODO: Keep track of the expression source locations
+            console.error("ProgramError: \(issue)")
+        } catch {
+            fatalError("Unexpected error: \(error)")
         }
+        return .failure
     }
     
     public func exit(with status: Status) -> Never {
