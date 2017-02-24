@@ -27,30 +27,34 @@
 
 import Foundation
 
-public final class Validator: ASTVisitor {
+public final class Validator: ExpressionVisitor {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case callingXXX
-        case duplicateVariableDeclaration(String)
+        case tmp(Source.Location)
         
         public var description: String {
             switch self {
-            case .callingXXX:
-                return "Calling something that isn't callable."
-            case .duplicateVariableDeclaration(let name):
-                return "A variable named '\(name)' already exists in this scope."
+            case .tmp(_):
+                return "XXXError: This is a sample error."
+            }
+        }
+        
+        public var location: Source.Location {
+            switch self {
+            case .tmp(let location):
+                return location
             }
         }
     }
     
     public typealias Scope = [String: Bool]
     
-    public init(_ expressions: [AST.Expression]) {
+    public init(_ expressions: [Expression]) {
         self.expressions = expressions
         self.scopes = []
     }
     
-    public func validate() throws -> [AST.Expression] {
+    public func validate() throws -> [Expression] {
         for expression in expressions {
             if let error = expression.accept(self) {
                 throw error
@@ -59,65 +63,53 @@ public final class Validator: ASTVisitor {
         return expressions
     }
     
-    public func visit(_ expression: AST.Expression) -> Error? {
-        switch expression {
-        case .assign(_, let rhs):
-            return rhs.accept(self)
-        case .binary(_, _, _):
-            return nil
-        case .call(let callee, let args):
-            return validateCall(callee, args)
-        case .get(_, _):
-            return nil
-        case .primary(let value):
-            switch value {
-            case .boolean(_):
-                return nil
-            case .function(_, _):
-                return nil
-            case .identifier(_):
-                return nil
-            case .keyword(_):
-                return nil
-            case .list(_):
-                return nil
-            case .map(_):
-                return nil
-            case .number(_):
-                return nil
-            case .string(_):
-                return nil
-            }
-        case .set(_, _, _):
-            return nil
-        case .unary(_, _):
-            return nil
-        }
+    public func visit(_ expression: Expression) -> Error? {
+        return nil
+        
+//        switch expression {
+//        case .assign(_, let rhs):
+//            return rhs.accept(self)
+//        case .binary(_, _, _):
+//            return nil
+//        case .boolean(_):
+//            return nil
+//        case .call(let callee, let args):
+//            return validateCall(callee, args)
+//        case .function(_, _):
+//            return nil
+//        case .get(_, _):
+//            return nil
+//        case .identifier(_):
+//            return nil
+//        case .keyword(_):
+//            return nil
+//        case .list(_):
+//            return nil
+//        case .map(_):
+//            return nil
+//        case .number(_):
+//            return nil
+//        case .set(_, _, _):
+//            return nil
+//        case .string(_):
+//            return nil
+//        case .unary(_, _):
+//            return nil
+//        }
+        
     }
     
     /// TODO: Not really correct
-    private func validateCall(_ callee: AST.Expression, _ args: [AST.Identifier: AST.Expression]) -> Error? {
-        switch callee {
-        case .primary(_):
-            return Error.callingXXX
-        default:
-            return nil
-        }
-    }
-    
-//    private func pushScope() {
-//        scopes.append([:])
-//    }
-//    
-//    private func popScope() -> Scope {
-//        return scopes.removeLast()
-//    }
-//    
-//    private var hasScope: Bool {
-//        return !scopes.isEmpty
+//    private func validateCall(_ callee: Expression, _ args: [Token.Identifier: Expression]) -> Error? {
+//        switch callee {
+//        case .primary(_):
+//            return Error.callingXXX
+//        default:
+//            return nil
+//        }
 //    }
     
-    private let expressions: [AST.Expression]
+    private let expressions: [Expression]
     private var scopes: [Scope]
 }
 

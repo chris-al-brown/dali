@@ -20,19 +20,19 @@
 // THE SOFTWARE.
 //
 // dali
-// AST.swift
-// 02/10/2017
-// Abstract syntax tree for the language
+// Expression.swift
+// 02/24/2017
+// Abstract syntax tree expressions
 // -----------------------------------------------------------------------------
 
 import Foundation
 
-public protocol ASTVisitor {
+public protocol ExpressionVisitor {
     associatedtype VisitedValue
-    func visit(_ expression: AST.Expression) -> VisitedValue
+    func visit(_ expression: Expression) -> VisitedValue
 }
 
-public struct AST {
+public struct Expression {
 
     public enum BinaryOperator {
         
@@ -120,66 +120,50 @@ public struct AST {
         }
     }
     
-    public indirect enum Expression {
-
+    public indirect enum Symbol {
+        
         /// name: "Chris"
-        case assign(Identifier, Expression)
+        case assign(Token.Identifier, Expression)
         
         /// true & !true
         case binary(Expression, BinaryOperator, Expression)
-
-        /// circle(x:0, y:0, radius:1)
-        case call(Expression, [Identifier: Expression])
-
-        /// geometry[circle]
-        case get(Expression, Index)
-
-        /// person[name]: "Nick" + " " + "Robins"
-        case set(Expression, Index, Expression)
-
-        /// true, my_var, "Hello", etc.
-        case primary(Primary)
-
-        /// !true
-        case unary(UnaryOperator, Expression)
-        
-        public func accept<T: ASTVisitor>(_ visitor: T) -> T.VisitedValue {
-            return visitor.visit(self)
-        }
-    }
-    
-    public typealias Identifier = String
-
-    public typealias Index = Expression
-    
-    public enum Primary {
         
         /// false
         case boolean(Bool)
+        
+        /// circle(x:0, y:0, radius:1)
+        case call(Expression, [Token.Identifier: Expression])
 
         /// { (first, second) | first + second }
-        case function([Identifier], [Expression])
+        case function([Token.Identifier], [Expression])
+        
+        /// geometry[circle]
+        case get(Expression, Expression)
 
         /// x
-        case identifier(Identifier)
-        
-        /// pi
-        case keyword(Keyword)
+        case identifier(Token.Identifier)
 
+        /// pi
+        case keyword(Token.Keyword)
+        
         /// [x + 1, y + 1, z + 1]
         case list([Expression])
         
         /// [name: "Chris", age: 15]
-        case map([Identifier: Expression])
+        case map([Token.Identifier: Expression])
         
         /// 1.512
         case number(Double)
 
+        /// person[name]: "Nick" + " " + "Robins"
+        case set(Expression, Expression, Expression)
+        
         /// "message"
         case string(String)
+        
+        /// !true
+        case unary(UnaryOperator, Expression)
     }
-    
-    public typealias Keyword = Token.Keyword
     
     public enum UnaryOperator {
         case positive           /// +
@@ -210,4 +194,16 @@ public struct AST {
             }
         }
     }
+
+    public init(_ symbol: Symbol, _ location: Source.Location) {
+        self.symbol = symbol
+        self.location = location
+    }
+    
+    public func accept<Visitor: ExpressionVisitor>(_ visitor: Visitor) -> Visitor.VisitedValue {
+        return visitor.visit(self)
+    }
+
+    public let symbol: Symbol
+    public let location: Source.Location
 }

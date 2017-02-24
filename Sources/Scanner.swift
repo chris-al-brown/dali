@@ -37,11 +37,11 @@ public final class Scanner {
         public var description: String {
             switch self {
             case .unexpectedCharacter(_, let character):
-                return "Encountered an unsupported character: '\(character)'"
+                return "SyntaxError: Encountered an unsupported character: '\(character)'"
             case .unsupportedNumericFormat(_):
-                return "Numbers are only supported in simple double and integer formats."
+                return "SyntaxError: Numbers are only supported in simple double and integer formats."
             case .unterminatedString(_):
-                return "Strings require a closing double quote and cannot span multiple lines."
+                return "SyntaxError: Strings require a closing double quote and cannot span multiple lines."
             }
         }
 
@@ -220,6 +220,10 @@ public final class Scanner {
                         } else {
                             /// Absorb the "."
                             let _ = advance()
+                            /// And following stuff to get better error
+                            while isAlpha(peek()) || isDigit(peek()) {
+                                let _ = advance()
+                            }
                             throw Error.unsupportedNumericFormat(locate())
                         }
                     }
