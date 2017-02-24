@@ -98,7 +98,9 @@ public struct Console {
                 return useColor ? ANSIColor.yellow.apply(value.description) : value.description
             case .call(let lhs, let args):
                 var output = ""
+                output += "("
                 output += visit(lhs)
+                output += ")"
                 output += "("
                 output += args.reduce("") {
                     let key = useColor ? ANSIColor.cyan.apply($0.1.0) : $0.1.0
@@ -140,8 +142,6 @@ public struct Console {
                 output += visit(index)
                 output += "]"
                 return output
-            case .identifier(let value):
-                return useColor ? ANSIColor.cyan.apply(value) : value
             case .keyword(let value):
                 return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
             case .list(let values):
@@ -191,6 +191,8 @@ public struct Console {
                 output += visit(rhs)
                 output += ")"
                 return output
+            case .variable(let value):
+                return useColor ? ANSIColor.cyan.apply(value) : value
             }
         }
         

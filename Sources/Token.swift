@@ -89,7 +89,7 @@ public struct Token {
         case string(String)         /// "This is a string"
         
         /// Identifier
-        case identifier(Identifier) /// my_variable
+        case identifier(Identifier) /// person
         
         /// Keywords
         case keyword(Keyword)       /// pi, e, width, height, etc.

@@ -32,7 +32,11 @@ public protocol ExpressionVisitor {
     func visit(_ expression: Expression) -> VisitedValue
 }
 
-public struct Expression {
+public struct Expression: Hashable {
+    
+    public static func ==(lhs: Expression, rhs: Expression) -> Bool {
+        return lhs.id == rhs.id
+    }
 
     public enum BinaryOperator {
         
@@ -140,9 +144,6 @@ public struct Expression {
         /// geometry[circle]
         case get(Expression, Expression)
 
-        /// x
-        case identifier(Token.Identifier)
-
         /// pi
         case keyword(Token.Keyword)
         
@@ -163,6 +164,9 @@ public struct Expression {
         
         /// !true
         case unary(UnaryOperator, Expression)
+
+        /// x
+        case variable(Token.Identifier)
     }
     
     public enum UnaryOperator {
@@ -194,8 +198,9 @@ public struct Expression {
             }
         }
     }
-
-    public init(_ symbol: Symbol, _ location: Source.Location) {
+    
+    public init(_ id: Int, _ symbol: Symbol, _ location: Source.Location) {
+        self.id = id
         self.symbol = symbol
         self.location = location
     }
@@ -204,6 +209,11 @@ public struct Expression {
         return visitor.visit(self)
     }
 
+    public var hashValue: Int {
+        return id
+    }
+
+    public let id: Int
     public let symbol: Symbol
     public let location: Source.Location
 }
