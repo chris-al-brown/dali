@@ -29,6 +29,8 @@ import Foundation
 
 public struct Token {
     
+    public typealias Identifier = String
+
     public enum Keyword: String {
         case e  = "e"
         case pi = "pi"
@@ -87,7 +89,7 @@ public struct Token {
         case string(String)         /// "This is a string"
         
         /// Identifier
-        case identifier(String)     /// my_variable
+        case identifier(Identifier) /// my_variable
         
         /// Keywords
         case keyword(Keyword)       /// pi, e, width, height, etc.

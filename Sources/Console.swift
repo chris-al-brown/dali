@@ -69,14 +69,14 @@ public struct Console {
         }
     }
     
-    public struct Formatter: ASTVisitor {
+    public struct Formatter: ExpressionVisitor {
         
         public init(useColor: Bool) {
             self.useColor = useColor
         }
         
-        public func visit(_ expression: AST.Expression) -> String {
-            switch expression {
+        public func visit(_ expression: Expression) -> String {
+            switch expression.symbol {
             case .assign(let key, let value):
                 var output = ""
                 output += useColor ? ANSIColor.cyan.apply(key) : key
@@ -94,6 +94,8 @@ public struct Console {
                 output += visit(rhs)
                 output += ")"
                 return output
+            case .boolean(let value):
+                return useColor ? ANSIColor.yellow.apply(value.description) : value.description
             case .call(let lhs, let args):
                 var output = ""
                 output += visit(lhs)
@@ -109,39 +111,6 @@ public struct Console {
                 }
                 output += ")"
                 return output
-            case .get(let lhs, let index):
-                var output = ""
-                output += visit(lhs)
-                output += "["
-                output += visit(index)
-                output += "]"
-                return output
-            case .primary(let primary):
-                return visit(primary)
-            case .set(let lhs, let index, let rhs):
-                var output = ""
-                output += visit(lhs)
-                output += "["
-                output += visit(index)
-                output += "]"
-                output += ":"
-                output += " "
-                output += visit(rhs)
-                return output
-            case .unary(let op, let rhs):
-                var output = ""
-                output += "("
-                output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
-                output += visit(rhs)
-                output += ")"
-                return output
-            }
-        }
-        
-        private func visit(_ primary: AST.Primary) -> String {
-            switch primary {
-            case .boolean(let value):
-                return useColor ? ANSIColor.yellow.apply(value.description) : value.description
             case .function(let args, let body):
                 var output = ""
                 output += useColor ? ANSIColor.green.apply("@") : "@"
@@ -163,6 +132,13 @@ public struct Console {
                     let _ = output.unicodeScalars.popLast()
                 }
                 output += "}"
+                return output
+            case .get(let lhs, let index):
+                var output = ""
+                output += visit(lhs)
+                output += "["
+                output += visit(index)
+                output += "]"
                 return output
             case .identifier(let value):
                 return useColor ? ANSIColor.cyan.apply(value) : value
@@ -196,8 +172,25 @@ public struct Console {
                 return output
             case .number(let value):
                 return useColor ? ANSIColor.blue.apply(value.description) : value.description
+            case .set(let lhs, let index, let rhs):
+                var output = ""
+                output += visit(lhs)
+                output += "["
+                output += visit(index)
+                output += "]"
+                output += ":"
+                output += " "
+                output += visit(rhs)
+                return output
             case .string(let value):
                 return useColor ? ANSIColor.magenta.apply("\"" + value + "\"") : "\"" + value + "\""
+            case .unary(let op, let rhs):
+                var output = ""
+                output += "("
+                output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
+                output += visit(rhs)
+                output += ")"
+                return output
             }
         }
         
@@ -225,6 +218,10 @@ public struct Console {
         error(format(issue.description, in:source, at:issue.location))
     }
     
+    public func error(_ issue: Validator.Error, in source: Source) {
+        error(format(issue.description, in:source, at:issue.location))
+    }
+
     private func format(_ message: String, in source: Source, at location: Source.Location) -> String {
         let row = source.line(for:location)
         let col = source.columns(for:location)
@@ -233,7 +230,7 @@ public struct Console {
         output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
         output += source.extractLine(location) + "\n"
         output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
-        output += "SyntaxError: \(message)"
+        output += message
         return output
     }
     
@@ -241,7 +238,7 @@ public struct Console {
         print(message, separator:"", terminator:terminator)
     }
     
-    public func log(_ expression: AST.Expression) {
+    public func log(_ expression: Expression) {
         print(formatter.visit(expression))
     }
     
