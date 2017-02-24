@@ -149,15 +149,6 @@
 # sample(from:where:)
 # sample(from:where:count:)
 
-# Context
-
-    # @ (this, self, etc.)
-    # @.x
-    # @.y
-    # @.count
-    # @.@ (parent context)
-    # @.@.@...@ => none eventually
-
 # Standard library
 
     debug()

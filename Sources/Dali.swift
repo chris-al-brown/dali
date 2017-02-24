@@ -90,49 +90,50 @@ public final class Dali {
     }
     
     private func random(_ xoroshiro: inout Xoroshiro128Plus, complexity: Int) -> Expression {
+        let id = 0
         let location = "".unicodeScalars.startIndex..<"".unicodeScalars.endIndex
         switch complexity {
         case 0:
             switch xoroshiro.randomDouble() {
             case 0.00..<0.20:
-                return Expression(.boolean(xoroshiro.randomBool()), location)
+                return Expression(id, .boolean(xoroshiro.randomBool()), location)
             case 0.20..<0.40:
-                return Expression(xoroshiro.randomBool() ? .identifier("person") : .identifier("circle"), location)
+                return Expression(id, xoroshiro.randomBool() ? .variable("person") : .variable("circle"), location)
             case 0.40..<0.60:
-                return Expression(xoroshiro.randomBool() ? .keyword(.pi) : .keyword(.e), location)
+                return Expression(id, xoroshiro.randomBool() ? .keyword(.pi) : .keyword(.e), location)
             case 0.60..<0.80:
-                return Expression(.number(xoroshiro.randomDouble()), location)
+                return Expression(id, .number(xoroshiro.randomDouble()), location)
             default:
-                return Expression(.string("Hello world"), location)
+                return Expression(id, .string("Hello world"), location)
             }
         case 1:
             let newComplexity = complexity - 1
             switch xoroshiro.randomDouble() {
             case 0.00..<0.33:
-                return Expression(.function(["x", "y"], [random(&xoroshiro, complexity:newComplexity)]), location)
+                return Expression(id, .function(["x", "y"], [random(&xoroshiro, complexity:newComplexity)]), location)
             case 0.33..<0.66:
-                return Expression(.list([random(&xoroshiro, complexity:newComplexity)]), location)
+                return Expression(id, .list([random(&xoroshiro, complexity:newComplexity)]), location)
             default:
-                return Expression(.map(["name": random(&xoroshiro, complexity:newComplexity)]), location)
+                return Expression(id, .map(["name": random(&xoroshiro, complexity:newComplexity)]), location)
             }
         default:
             let newComplexity = complexity - 1
             switch xoroshiro.randomDouble() {
             case 0.0..<0.2:
-                return Expression(.assign("age", random(&xoroshiro, complexity:newComplexity)), location)
+                return Expression(id, .assign("age", random(&xoroshiro, complexity:newComplexity)), location)
             case 0.2..<0.4:
-                return Expression(.unary(.not, random(&xoroshiro, complexity:newComplexity)), location)
+                return Expression(id, .unary(.not, random(&xoroshiro, complexity:newComplexity)), location)
             case 0.4..<0.6:
                 let index: Expression = random(&xoroshiro, complexity:newComplexity)
                 if xoroshiro.randomBool() {
-                    return Expression(.get(random(&xoroshiro, complexity:newComplexity), index), location)
+                    return Expression(id, .get(random(&xoroshiro, complexity:newComplexity), index), location)
                 } else {
-                    return Expression(.set(random(&xoroshiro, complexity:newComplexity), index, random(&xoroshiro, complexity:newComplexity)), location)
+                    return Expression(id, .set(random(&xoroshiro, complexity:newComplexity), index, random(&xoroshiro, complexity:newComplexity)), location)
                 }
             case 0.6..<0.8:
-                return Expression(.binary(random(&xoroshiro, complexity:newComplexity), .add, random(&xoroshiro, complexity:newComplexity)), location)
+                return Expression(id, .binary(random(&xoroshiro, complexity:newComplexity), .add, random(&xoroshiro, complexity:newComplexity)), location)
             default:
-                return Expression(.call(random(&xoroshiro, complexity:newComplexity), ["x": random(&xoroshiro, complexity:newComplexity), "y": random(&xoroshiro, complexity:newComplexity)]), location)
+                return Expression(id, .call(random(&xoroshiro, complexity:newComplexity), ["x": random(&xoroshiro, complexity:newComplexity), "y": random(&xoroshiro, complexity:newComplexity)]), location)
             }
         }
     }

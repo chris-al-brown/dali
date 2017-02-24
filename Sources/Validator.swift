@@ -30,30 +30,53 @@ import Foundation
 public final class Validator: ExpressionVisitor {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case tmp(Source.Location)
+        case duplicateVariableDeclaration(Source.Location)
         
         public var description: String {
             switch self {
-            case .tmp(_):
-                return "XXXError: This is a sample error."
+            case .duplicateVariableDeclaration(_):
+                return "ScopeError: Variable is already declared in this scope."
             }
         }
         
         public var location: Source.Location {
             switch self {
-            case .tmp(let location):
+            case .duplicateVariableDeclaration(let location):
                 return location
             }
         }
     }
     
-    public typealias Scope = [String: Bool]
+    public typealias Scope = Set<String>
     
     public init(_ expressions: [Expression]) {
         self.expressions = expressions
         self.scopes = []
+        self.locals = [:]
     }
     
+    private func define(_ variable: Token.Identifier, within expression: Expression) -> Error? {
+        if let scope = scopes.last, scope.contains(variable) {
+            return Error.duplicateVariableDeclaration(expression.location)
+        }
+        if var scope = scopes.popLast() {
+            scope.insert(variable)
+            scopes.append(scope)
+        }
+        return nil
+    }
+    
+    private func lookup(_ variable: Token.Identifier, within expression: Expression) -> Error? {
+        for (index, scope) in scopes.reversed().enumerated() {
+            if scope.contains(variable) {
+                locals[expression] = index
+                return nil
+            }
+        }
+        /// Global variable
+        return nil
+    }
+
     public func validate() throws -> [Expression] {
         for expression in expressions {
             if let error = expression.accept(self) {
@@ -64,52 +87,48 @@ public final class Validator: ExpressionVisitor {
     }
     
     public func visit(_ expression: Expression) -> Error? {
-        return nil
-        
-//        switch expression {
-//        case .assign(_, let rhs):
-//            return rhs.accept(self)
-//        case .binary(_, _, _):
-//            return nil
-//        case .boolean(_):
-//            return nil
-//        case .call(let callee, let args):
-//            return validateCall(callee, args)
-//        case .function(_, _):
-//            return nil
-//        case .get(_, _):
-//            return nil
-//        case .identifier(_):
-//            return nil
-//        case .keyword(_):
-//            return nil
-//        case .list(_):
-//            return nil
-//        case .map(_):
-//            return nil
-//        case .number(_):
-//            return nil
-//        case .set(_, _, _):
-//            return nil
-//        case .string(_):
-//            return nil
-//        case .unary(_, _):
-//            return nil
-//        }
-        
+        return resolve(expression)
     }
     
-    /// TODO: Not really correct
-//    private func validateCall(_ callee: Expression, _ args: [Token.Identifier: Expression]) -> Error? {
-//        switch callee {
-//        case .primary(_):
-//            return Error.callingXXX
-//        default:
-//            return nil
-//        }
-//    }
+    private func resolve(_ expression: Expression) -> Error? {
+        switch expression.symbol {
+        case .assign(let variable, let rhs):
+            return define(variable, within:expression) ?? resolve(rhs)
+        case .binary(let lhs, _, let rhs):
+            return resolve(lhs) ?? resolve(rhs)
+        case .boolean(_):
+            return nil
+        case .call(let callee, let args):
+            return resolve(callee) ?? args.flatMap { resolve($0.1) }.first
+        case .function(let args, let body):
+            scopes.append(Scope())
+            let _args = args.flatMap { define($0, within:expression) }.first
+            let _body = body.flatMap { resolve($0) }.first
+            scopes.removeLast()
+            return _args ?? _body
+        case .get(let lhs, let index):
+            return resolve(lhs) ?? resolve(index)
+        case .keyword(_):
+            return nil
+        case .list(let values):
+            return values.flatMap { resolve($0) }.first
+        case .map(let values):
+            return values.flatMap { resolve($0.1) }.first
+        case .number(_):
+            return nil
+        case .set(let lhs, let index, let rhs):
+            return resolve(lhs) ?? resolve(index) ?? resolve(rhs)
+        case .string(_):
+            return nil
+        case .unary(_, let rhs):
+            return resolve(rhs)
+        case .variable(let variable):
+            return lookup(variable, within:expression)
+        }
+    }
     
     private let expressions: [Expression]
     private var scopes: [Scope]
+    private var locals: [Expression: Int]
 }
 
