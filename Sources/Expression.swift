@@ -38,19 +38,19 @@ public struct Expression: Hashable {
         return lhs.id == rhs.id
     }
 
-    public enum BinaryOperator {
+    public enum BinaryOperator: String {
         
-        case add                /// +
-        case subtract           /// -
-        case multiply           /// *
-        case divide             /// /
+        case add            = "+"
+        case subtract       = "-"
+        case multiply       = "*"
+        case divide         = "/"
         
-        case equalTo            /// =
-        case lessThan           /// <
-        case greaterThan        /// >
+        case equalTo        = "="
+        case lessThan       = "<"
+        case greaterThan    = ">"
         
-        case and                /// &
-        case or                 /// |
+        case and            = "&"
+        case or             = "|"
         
         public init?(_ lexeme: Token.Lexeme) {
             switch lexeme {
@@ -169,10 +169,10 @@ public struct Expression: Hashable {
         case variable(Token.Identifier)
     }
     
-    public enum UnaryOperator {
-        case positive           /// +
-        case negative           /// -
-        case not                /// !
+    public enum UnaryOperator: String {
+        case positive   = "+"
+        case negative   = "-"
+        case not        = "!"
         
         public init?(_ lexeme: Token.Lexeme) {
             switch lexeme {

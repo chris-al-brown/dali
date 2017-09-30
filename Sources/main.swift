@@ -28,6 +28,7 @@
 import Foundation
 
 /// Start the program
-let args = CommandLine.arguments
-let dali = Dali(args)
+let dali = Dali(CommandLine.arguments)
 dali.run()
+
+

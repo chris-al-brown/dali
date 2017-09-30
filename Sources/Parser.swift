@@ -35,10 +35,8 @@ public final class Parser {
         case emptyFunctionBody(Source.Location)
         case invalidArgumentName(Token)
         case invalidAssignment(Source.Location)
-        case invalidIndex(Source.Location, String)
         case invalidMapKey(Token)
         case invalidSyntax(Token)
-        case invalidValue(Source.Location, String)
         case trailingComma(Source.Location)
         case unexpectedStreamEnd(Token)
         case unexpectedToken(Token, Token.Lexeme)
@@ -46,23 +44,19 @@ public final class Parser {
         public var description: String {
             switch self {
             case .degenerateMapKey(_, let key):
-                return "KeyError: Found a duplicate map key: '\(key)'"
+                return "SyntaxError: Found a duplicate map key: '\(key)'"
             case .degenerateArgumentName(_, let name):
-                return "NameError: Found a duplicate argument name: '\(name)'"
+                return "SyntaxError: Found a duplicate argument name: '\(name)'"
             case .emptyFunctionBody(_):
                 return "SyntaxError: Function bodies must contain at least one return statement."
             case .invalidArgumentName(let token):
-                return "NameError: Invalid argument name: '\(token.lexeme)'."
+                return "SyntaxError: Invalid argument name: '\(token.lexeme)'."
             case .invalidAssignment(_):
-                return "ValueError: Can not assign to the left side of the expression."
-            case .invalidIndex(_, let thing):
-                return "IndexError: Can not use \(thing) as an index."
+                return "SyntaxError: Can not assign to the left side of the expression."
             case .invalidMapKey(let token):
-                return "KeyError: Invalid map key: '\(token.lexeme)'"
+                return "SyntaxError: Invalid map key: '\(token.lexeme)'"
             case .invalidSyntax(let token):
                 return "SyntaxError: Unrecognized syntax starting at '\(token.lexeme)'."
-            case .invalidValue(_, let thing):
-                return "ValueError: Can not use \(thing) as a value."
             case .trailingComma(_):
                 return "SyntaxError: Invalid syntax with trailing comma."
             case .unexpectedStreamEnd(let token):
@@ -84,14 +78,10 @@ public final class Parser {
                 return token.location
             case .invalidAssignment(let location):
                 return location
-            case .invalidIndex(let location, _):
-                return location
             case .invalidMapKey(let token):
                 return token.location
             case .invalidSyntax(let token):
                 return token.location
-            case .invalidValue(let location, _):
-                return location
             case .trailingComma(let location):
                 return location
             case .unexpectedStreamEnd(let token):
@@ -216,7 +206,7 @@ public final class Parser {
                 let mark = current
                 let name = try parseArgumentName()
                 let _ = try consume(.colon)
-                let value = try parseValue()
+                let value = try parseExpression()
                 if parameters[name] == nil {
                     parameters[name] = value
                 } else {
@@ -233,7 +223,7 @@ public final class Parser {
             return try parseCall(Expression(id(), .call(lhs, parameters), location(from:lhs.location)))
         case .squareLeft:
             let _ = try consume(.squareLeft)
-            let index = try parseIndex()
+            let index = try parseExpression()
             let _ = try consume(.squareRight)
             return try parseCall(Expression(id(), .get(lhs, index), location(from:lhs.location)))
         default:
@@ -247,8 +237,7 @@ public final class Parser {
         let lhs = try parseBinary(unary)
         if check(.colon) {
             let _ = try consume(.colon)
-            /// Right-hand side must be a value type (not a setter or assignment)
-            let rhs = try parseValue()
+            let rhs = try parseExpression()
             switch lhs.symbol {
             case .get(let llhs, let index):
                 return Expression(id(), .set(llhs, index, rhs), location(from:start))
@@ -314,41 +303,6 @@ public final class Parser {
         return Expression(id(), .variable(value), location(from:start))
     }
     
-    private func parseIndex() throws -> Expression {
-        let start = current
-        let index = try parseExpression()
-        switch index.symbol {
-        case .assign(_, _):
-            throw Error.invalidIndex(location(from:start), "an assignment")
-        case .binary(_, _, _):
-            return index
-        case .boolean(_):
-            return index
-        case .call(_, _):
-            return index
-        case .function(_, _):
-            throw Error.invalidIndex(location(from:start), "a function definition")
-        case .get(_, _):
-            return index
-        case .keyword(_):
-            throw Error.invalidIndex(location(from:start), "a reserved keyword")
-        case .list(_):
-            throw Error.invalidIndex(location(from:start), "a list")
-        case .map(_):
-            throw Error.invalidIndex(location(from:start), "a map")
-        case .number(_):
-            return index
-        case .set(_, _, _):
-            throw Error.invalidIndex(location(from:start), "a setter")
-        case .string(_):
-            return index
-        case .unary(_, _):
-            return index
-        case .variable(_):
-            return index
-        }
-    }
-    
     private func parseMapKey() throws -> Token.Identifier {
         if case let .identifier(value) = current.lexeme {
             let _ = try consume(.identifier(value))
@@ -368,7 +322,7 @@ public final class Parser {
         let _ = try consume(.squareLeft)
         var elements: [Expression] = []
         while !check(.squareRight) {
-            elements.append(try parseValue())
+            elements.append(try parseExpression())
             if check(.comma) {
                 let _ = try consume(.comma)
                 if check(.squareRight) {
@@ -388,7 +342,7 @@ public final class Parser {
             let mark = current
             let key = try parseMapKey()
             let _ = try consume(.colon)
-            let value = try parseValue()
+            let value = try parseExpression()
             if elements[key] == nil {
                 elements[key] = value
             } else {
@@ -449,19 +403,6 @@ public final class Parser {
         }
         let _ = try consume(unary.lexeme)
         return Expression(id(), .unary(unary, try parseUnary()), location(from:start))
-    }
-
-    private func parseValue() throws -> Expression {
-        let start = current
-        let value = try parseExpression()
-        switch value.symbol {
-        case .assign(_, _):
-            throw Error.invalidValue(location(from:start), "an assignment")
-        case .set(_, _, _):
-            throw Error.invalidValue(location(from:start), "a setter")
-        default:
-            return value
-        }
     }
 
     private func reset() {
