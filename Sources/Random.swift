@@ -57,7 +57,7 @@ public struct Xoroshiro128Plus: CustomStringConvertible {
         let kExponentBits = UInt64(0x3FF0000000000000)
         let kMantissaMask = UInt64(0x000FFFFFFFFFFFFF)
         let u = (seed & kMantissaMask) | kExponentBits
-        return unsafeBitCast(u, to:Double.self) - 1.0
+        return Double(bitPattern: u) - 1.0
     }
     
     public init() {

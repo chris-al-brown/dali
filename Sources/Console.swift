@@ -108,8 +108,8 @@ public struct Console {
                     return $0.0 + key + ": " + value + ", "
                 }
                 if !args.isEmpty {
-                    let _ = output.unicodeScalars.popLast()
-                    let _ = output.unicodeScalars.popLast()
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
                 }
                 output += ")"
                 return output
@@ -122,16 +122,16 @@ public struct Console {
                     return $0.0 + arg + ", "
                 }
                 if !args.isEmpty {
-                    let _ = output.unicodeScalars.popLast()
-                    let _ = output.unicodeScalars.popLast()
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
                 }
                 output += ") {"
                 output += body.reduce("") {
                     return $0.0 + visit($0.1) + ", "
                 }
                 if !body.isEmpty {
-                    let _ = output.unicodeScalars.popLast()
-                    let _ = output.unicodeScalars.popLast()
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
                 }
                 output += "}"
                 return output
@@ -151,8 +151,8 @@ public struct Console {
                     return $0.0 + visit($0.1) + ", "
                 }
                 if !values.isEmpty {
-                    let _ = output.unicodeScalars.popLast()
-                    let _ = output.unicodeScalars.popLast()
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
                 }
                 output += "]"
                 return output
@@ -165,8 +165,8 @@ public struct Console {
                     return $0.0 + key + ": " + value + ", "
                 }
                 if !values.isEmpty {
-                    let _ = output.unicodeScalars.popLast()
-                    let _ = output.unicodeScalars.popLast()
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
                 }
                 output += "}"
                 return output
