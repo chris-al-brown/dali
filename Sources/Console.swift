@@ -103,9 +103,9 @@ public struct Console {
                 output += ")"
                 output += "("
                 output += args.reduce("") {
-                    let key = useColor ? ANSIColor.cyan.apply($0.1.0) : $0.1.0
-                    let value = visit($0.1.1)
-                    return $0.0 + key + ": " + value + ", "
+                    let key = useColor ? ANSIColor.cyan.apply($1.0) : $1.0
+                    let value = visit($1.1)
+                    return $0 + key + ": " + value + ", "
                 }
                 if !args.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
@@ -118,8 +118,8 @@ public struct Console {
                 output += useColor ? ANSIColor.green.apply("@") : "@"
                 output += "("
                 output += args.reduce("") {
-                    let arg = useColor ? ANSIColor.cyan.apply($0.1) : $0.1
-                    return $0.0 + arg + ", "
+                    let arg = useColor ? ANSIColor.cyan.apply($1) : $1
+                    return $0 + arg + ", "
                 }
                 if !args.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
@@ -127,7 +127,7 @@ public struct Console {
                 }
                 output += ") {"
                 output += body.reduce("") {
-                    return $0.0 + visit($0.1) + ", "
+                    return $0 + visit($1) + ", "
                 }
                 if !body.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
@@ -148,7 +148,7 @@ public struct Console {
                 var output = ""
                 output += "["
                 output += values.reduce("") {
-                    return $0.0 + visit($0.1) + ", "
+                    return $0 + visit($1) + ", "
                 }
                 if !values.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
@@ -160,9 +160,9 @@ public struct Console {
                 var output = ""
                 output += "{"
                 output += values.reduce("") {
-                    let key = useColor ? ANSIColor.cyan.apply($0.1.0) : $0.1.0
-                    let value = visit($0.1.1)
-                    return $0.0 + key + ": " + value + ", "
+                    let key = useColor ? ANSIColor.cyan.apply($1.0) : $1.0
+                    let value = visit($1.1)
+                    return $0 + key + ": " + value + ", "
                 }
                 if !values.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
