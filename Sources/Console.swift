@@ -161,7 +161,7 @@ public struct Console {
 //    public func error(_ issue: Validator.Error, in source: Source) {
 //        error(format(issue.description, in:source, at:issue.location))
 //    }
-
+    
     private func format(_ message: String, in source: Source, at location: Source.Location) -> String {
         let row = source.line(for:location)
         let col = source.columns(for:location)

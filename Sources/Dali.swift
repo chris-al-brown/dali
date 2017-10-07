@@ -61,20 +61,20 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            let expressions = try parser.parse()
-            expressions.forEach {
+            let interpreter = Interpreter()
+            (try parser.parse()).forEach {
                 console.log($0)
+                if let value = interpreter.interpret($0) {
+                    print(value)
+                } else {
+                    print("nil")
+                }
             }
-//            let validator = Validator(try parser.parse())
-//            let expressions = try validator.validate()
-//            expressions.forEach { console.log($0) }
             return .success
         } catch let issue as Scanner.Error {
             console.error(issue, in:source)
         } catch let issue as Parser.Error {
             console.error(issue, in:source)
-//        } catch let issue as Validator.Error {
-//            console.error(issue, in:source)
         } catch {
             fatalError("Unexpected error: \(error)")
         }
