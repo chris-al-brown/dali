@@ -242,7 +242,7 @@ public final class Scanner {
                         let _ = advance()
                     }
                     /// Not exactly sure why this is optional?
-                    let value = String(source.extract(locate())).unsafelyUnwrapped
+                    let value = String(source.extract(locate()))
                     if let keyword = Token.Keyword.getLexeme(for:value) {
                         append(lexeme:keyword)
                     } else {
