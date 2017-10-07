@@ -161,22 +161,13 @@ public final class Parser {
         return Expression(id(), .boolean(value), location(from:start))
     }
 
-    private func parseColor(_ value: String) throws -> Expression {
-        let start = current
-        let _ = try consume(.color(value))
-        let scanner = Foundation.Scanner(string:value)
-        var uint32: UInt32 = 0
-        scanner.scanHexInt32(&uint32)
-        return Expression(id(), .color(uint32), location(from:start))
-    }
-
     private func parseCall(_ lhs: Expression) throws -> Expression {
         switch current.lexeme {
         case .parenLeft:
             let _ = try consume(.parenLeft)
-            var parameters: [Expression] = []
+            var arguments: [Expression] = []
             while !check(.parenRight) {
-                parameters.append(try parseExpression())
+                arguments.append(try parseExpression())
                 if check(.comma) {
                     let _ = try consume(.comma)
                     if check(.parenRight) {
@@ -185,41 +176,19 @@ public final class Parser {
                 }
             }
             let _ = try consume(.parenRight)
-            return try parseCall(Expression(id(), .call(lhs, parameters), location(from:lhs.location)))
-        case .squareLeft:
-            let _ = try consume(.squareLeft)
-            var indices: [Expression] = []
-            while !check(.squareRight) {
-                indices.append(try parseExpression())
-                if check(.comma) {
-                    let _ = try consume(.comma)
-                    if check(.squareRight) {
-                        throw Error.trailingComma(previous.location)
-                    }
-                }
-            }
-            let _ = try consume(.squareRight)
-            return try parseCall(Expression(id(), .slice(lhs, indices), location(from:lhs.location)))
+            return try parseCall(Expression(id(), .call(lhs, arguments), location(from:lhs.location)))
         default:
             return lhs
         }
     }
 
-    private func parseMerge() throws -> Expression {
+    private func parseColor(_ value: String) throws -> Expression {
         let start = current
-        let _ = try consume(.curlyLeft)
-        var elements: [Expression] = []
-        while !check(.curlyRight) {
-            elements.append(try parseExpression())
-            if check(.comma) {
-                let _ = try consume(.comma)
-                if check(.curlyRight) {
-                    throw Error.trailingComma(previous.location)
-                }
-            }
-        }
-        let _ = try consume(.curlyRight)
-        return Expression(id(), .merge(elements), location(from:start))
+        let _ = try consume(.color(value))
+        let scanner = Foundation.Scanner(string:value)
+        var uint32: UInt32 = 0
+        scanner.scanHexInt32(&uint32)
+        return Expression(id(), .color(uint32), location(from:start))
     }
     
     private func parseExpression() throws -> Expression {
@@ -257,7 +226,7 @@ public final class Parser {
         let _ = try consume(.keyword(value))
         return Expression(id(), .keyword(value), location(from:start))
     }
-
+    
     private func parseNumber(_ value: Double) throws -> Expression {
         let start = current
         let _ = try consume(.number(value))
@@ -270,6 +239,8 @@ public final class Parser {
             return try parseBoolean(value)
         case .color(let value):
             return try parseColor(value)
+        case .parenLeft:
+            return try parseGroup()
         case .identifier(let value):
             return try parseIdentifier(value)
         case .keyword(let value):
@@ -278,10 +249,6 @@ public final class Parser {
             return try parseNumber(value)
         case .string(let value):
             return try parseString(value)
-        case .parenLeft:
-            return try parseGroup()
-        case .curlyLeft:
-            return try parseMerge()
         default:
             throw Error.invalidSyntax(current)
         }

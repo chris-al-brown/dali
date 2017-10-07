@@ -118,33 +118,8 @@ public struct Console {
                 return useColor ? ANSIColor.white.apply("#\(r, g, b)") : "#\(r, g, b)"
             case .keyword(let value):
                 return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
-            case .merge(let values):
-                var output = ""
-                output += "{"
-                output += values.reduce("") {
-                    return $0 + visit($1) + ", "
-                }
-                if !values.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += "}"
-                return output
             case .number(let value):
                 return useColor ? ANSIColor.blue.apply(value.description) : value.description
-            case .slice(let lhs, let indices):
-                var output = ""
-                output += visit(lhs)
-                output += "["
-                output += indices.reduce("") {
-                    return $0 + visit($1) + ", "
-                }
-                if !indices.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += "]"
-                return output
             case .string(let value):
                 return useColor ? ANSIColor.magenta.apply("\"" + value + "\"") : "\"" + value + "\""
             case .unary(let op, let rhs):

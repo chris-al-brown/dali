@@ -22,8 +22,8 @@ dali is a ...
 ## Requirements
 
 - Xcode
-    - Version: **8.2.1 (8C1002)**
-    - Language: **Swift 3.0**
+    - Version: **9.0 (9A235)**
+    - Language: **Swift 4.0**
 - OS X
     - Latest SDK: **macOS 10.12**
     - Deployment Target: **macOS 10.10**
@@ -41,14 +41,12 @@ The grammar of the language is given by the following EBNF grammar:
  
  statement      → expression eol
  
- expression     → call '[' index ']' ':' expression
-                | call '[' index ']'
-                | identifier ':' expression
+ expression     → identifier ':' expression
                 | identifier
  
- call           → primary ( '(' elements? ')' | '[' index ']' )*
+ call           → primary ( '(' arguments? ')' )*
 
- index          → call
+ arguments      → expression ( ',' expression )*
 
  or             → and ( '|' and )*
  
@@ -65,38 +63,28 @@ The grammar of the language is given by the following EBNF grammar:
  unary          → ( '!' | '-' | '+' ) unary | call
  
  primary        → boolean
-                | function
+                | color 
                 | group
                 | identifier
                 | keyword
-                | list
-                | map
                 | number
                 | string
  
  boolean        → 'true' | 'false'
- 
- function       → '@' '(' arguments? ')' '{' body '}'
 
- arguments      → identifier ( ',' identifier )*
- 
- body           → expression*
+ color          → '#' hex hex hex hex hex hex
  
  group          → '(' expression ')'
+
+ identifier     → alpha ( alpha | digit )*
  
- list           → '[' elements? ']'
- 
- elements       → expression ( ',' expression )*
- 
- map            → '{' keyvalues? '}'
- 
+ keyword        → 'pi' | 'e'
+
  number         → digit+ ( '.' digit+ )?
  
  string         → '"' ^( '"' | eol )* '"'
  
- identifier     → alpha ( alpha | digit )*
- 
- keyword        → 'pi' | 'e'
+ hex            → 'a' ... 'f' | 'A' ... 'F' | digit
  
  alpha          → 'a' ... 'z' | 'A' ... 'Z' | '_'
  

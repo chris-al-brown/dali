@@ -141,24 +141,14 @@ public final class Scanner {
                 append(lexeme:.newline)
                 
             /// Single-character tokens
-            case "@":
-                append(lexeme:.at)
             case ":":
                 append(lexeme:.colon)
             case ",":
                 append(lexeme:.comma)
-            case "{":
-                append(lexeme:.curlyLeft)
-            case "}":
-                append(lexeme:.curlyRight)
             case "(":
                 append(lexeme:.parenLeft)
             case ")":
                 append(lexeme:.parenRight)
-            case "[":
-                append(lexeme:.squareLeft)
-            case "]":
-                append(lexeme:.squareRight)
 
             /// Single-character tokens (arithmetic)
             case "+":
@@ -268,7 +258,7 @@ public final class Scanner {
                         let _ = advance()
                     }
                     let value = String(source.extract(locate()))
-                    if let keyword = Token.Keyword.getLexeme(for:value) {
+                    if let keyword = Token.Keyword.lexeme(for:value) {
                         append(lexeme:keyword)
                     } else {
                         append(lexeme:.identifier(value))

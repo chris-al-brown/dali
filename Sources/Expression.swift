@@ -143,15 +143,9 @@ public struct Expression: Hashable {
         /// pi
         case keyword(Token.Keyword)
         
-        /// {x, y, z}
-        case merge([Expression])
-        
         /// 1.512
         case number(Double)
 
-        /// kulers[0, 1, 10]
-        case slice(Expression, [Expression])
-        
         /// "message"
         case string(String)
         

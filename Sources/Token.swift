@@ -32,17 +32,14 @@ public struct Token {
     public typealias Identifier = String
 
     public enum Keyword: String {
-        case e  = "e"
         case pi = "pi"
         
-        public static func getLexeme(for string: String) -> Lexeme? {
+        public static func lexeme(for string: String) -> Lexeme? {
             switch string {
             case "true":
                 return .boolean(true)
             case "false":
                 return .boolean(false)
-            case "e":
-                return .keyword(.e)
             case "pi":
                 return .keyword(.pi)
             default:
@@ -54,15 +51,10 @@ public struct Token {
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
-        case at                     /// @
         case colon                  /// :
         case comma                  /// ,
-        case curlyLeft              /// {
-        case curlyRight             /// }
         case parenLeft              /// (
         case parenRight             /// )
-        case squareLeft             /// [
-        case squareRight            /// ]
         
         /// Single-character tokens (arithmetic)
         case plus                   /// +
@@ -93,7 +85,7 @@ public struct Token {
         case identifier(Identifier) /// person
         
         /// Keywords
-        case keyword(Keyword)       /// pi, e, etc.
+        case keyword(Keyword)       /// pi
         
         /// End of line
         case newline                /// newline
@@ -103,23 +95,13 @@ public struct Token {
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
-            case (.at, .at):
-                return true
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
                 return true
-            case (.curlyLeft, .curlyLeft):
-                return true
-            case (.curlyRight, .curlyRight):
-                return true
             case (.parenLeft, .parenLeft):
                 return true
             case (.parenRight, .parenRight):
-                return true
-            case (.squareLeft, .squareLeft):
-                return true
-            case (.squareRight, .squareRight):
                 return true
             case (.plus, .plus):
                 return true
@@ -178,24 +160,14 @@ extension Token.Lexeme: CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .at:
-            return "@"
         case .colon:
             return ":"
         case .comma:
             return ","
-        case .curlyLeft:
-            return "{"
-        case .curlyRight:
-            return "}"
         case .parenLeft:
             return "("
         case .parenRight:
             return ")"
-        case .squareLeft:
-            return "["
-        case .squareRight:
-            return "]"
         case .plus:
             return "+"
         case .minus:

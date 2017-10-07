@@ -24,19 +24,7 @@ var: -0.4
 var: "This is a string"
 
 % Function
-
-% TODO: Declaration (future)
-% function: @{ (first, second) | first + second }
-
-% Usage
 var: function(1.0, 2.0)
-
-% Concatenate
-var: {x, y, z}  
-
-% Slices (modulo subscripts)
-var[1, 2]	% = (y, z)
-var[0]		% = x
 
 % Operators
 
@@ -83,7 +71,7 @@ mix(true, false, range(0, 1, 1 / 1000))
 
 % Print
 print(var)
-print({true, false})
+print(true, false)
 print(1.0)
 
 % Range
@@ -93,3 +81,12 @@ range(0.0, 1.0, 0.1)
 random(#EFEFEF, #FFFFFF, #C0C0C0)
 random(true, false)
 
+% TODO: Declaration (future)
+% function: @{ (first, second) | first + second }
+
+% Concatenate (future)
+% var: {x, y, z}
+
+% Slices (future)
+% var[1, 2]    % = (y, z)
+% var[0]       % = x
