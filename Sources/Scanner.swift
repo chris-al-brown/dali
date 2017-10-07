@@ -31,6 +31,7 @@ public final class Scanner {
     
     public enum Error: Swift.Error, CustomStringConvertible {
         case unexpectedCharacter(Source.Location, UnicodeScalar)
+        case unsupportedColorFormat(Source.Location)
         case unsupportedNumericFormat(Source.Location)
         case unterminatedString(Source.Location)
 
@@ -38,6 +39,8 @@ public final class Scanner {
             switch self {
             case .unexpectedCharacter(_, let character):
                 return "SyntaxError: Encountered an unsupported character: '\(character)'"
+            case .unsupportedColorFormat(_):
+                return "SyntaxError: Colors are only supported in hexadecimal RGB format."
             case .unsupportedNumericFormat(_):
                 return "SyntaxError: Numbers are only supported in simple double and integer formats."
             case .unterminatedString(_):
@@ -48,6 +51,8 @@ public final class Scanner {
         public var location: Source.Location {
             switch self {
             case .unexpectedCharacter(let location, _):
+                return location
+            case .unsupportedColorFormat(let location):
                 return location
             case .unsupportedNumericFormat(let location):
                 return location
@@ -80,6 +85,16 @@ public final class Scanner {
     
     private func isDigit(_ scalar: Source.Scalar) -> Bool {
         return CharacterSet.decimalDigits.contains(scalar)
+    }
+    
+    private func isHex(_ scalar: Source.Scalar) -> Bool {
+        return (isDigit(scalar) && scalar != ".")
+            || scalar == "A" || scalar == "a"
+            || scalar == "B" || scalar == "b"
+            || scalar == "C" || scalar == "c"
+            || scalar == "D" || scalar == "d"
+            || scalar == "E" || scalar == "e"
+            || scalar == "F" || scalar == "f"
     }
     
     private func locate() -> Source.Location {
@@ -172,12 +187,24 @@ public final class Scanner {
                 append(lexeme:.bar)
 
             /// Single-character tokens (comments)
-            case "#":
+            case "%":
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
                 let index = source.index(after:start)
-                append(lexeme:.hash(source.extract(index..<current)))
+                append(lexeme:.percent(source.extract(index..<current)))
+            
+            /// Literals (color)
+            case "#":
+                for _ in 0..<6 {
+                    if isHex(peek()) {
+                        let _ = advance()
+                    } else {
+                        throw Error.unsupportedColorFormat(locate())
+                    }
+                }
+                let index = source.index(after:start)
+                append(lexeme:.color(source.extract(index..<current)))
                 
             /// Literals (string)
             case "\"":
@@ -201,7 +228,6 @@ public final class Scanner {
                 
             /// Literals (number, boolean), identifiers and keywords
             default:
-                
                 /// Literals (number)
                 if isDigit(character) {
                     /// Check for integer part
@@ -241,7 +267,6 @@ public final class Scanner {
                     while isAlpha(peek()) || isDigit(peek()) {
                         let _ = advance()
                     }
-                    /// Not exactly sure why this is optional?
                     let value = String(source.extract(locate()))
                     if let keyword = Token.Keyword.getLexeme(for:value) {
                         append(lexeme:keyword)

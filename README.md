@@ -39,20 +39,17 @@ The grammar of the language is given by the following EBNF grammar:
 ```
  program        → statement* eos
  
- statement      → expression ',' expression
-                | expression eol
+ statement      → expression eol
  
  expression     → call '[' index ']' ':' expression
                 | call '[' index ']'
                 | identifier ':' expression
                 | identifier
  
- call           → primary ( '(' keyvalues? ')' | '[' index ']' )*
+ call           → primary ( '(' elements? ')' | '[' index ']' )*
 
  index          → call
 
- keyvalues      → identifier ':' expression ( ',' identifier ':' expression )*
- 
  or             → and ( '|' and )*
  
  and            → equality ( '&' equality )*

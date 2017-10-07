@@ -81,10 +81,11 @@ public struct Token {
         case bar                    /// |
         
         /// Single-character tokens (comments)
-        case hash(String)           /// # This is a comment
+        case percent(String)        /// % This is a comment
         
         /// Literals
         case boolean(Bool)          /// true or false
+        case color(String)          /// #efefef
         case number(Double)         /// 1.512 or 15
         case string(String)         /// "This is a string"
         
@@ -92,7 +93,7 @@ public struct Token {
         case identifier(Identifier) /// person
         
         /// Keywords
-        case keyword(Keyword)       /// pi, e, width, height, etc.
+        case keyword(Keyword)       /// pi, e, etc.
         
         /// End of line
         case newline                /// newline
@@ -140,13 +141,15 @@ public struct Token {
                 return true
             case (.bar, .bar):
                 return true
-            case (.hash(let lvalue), .hash(let rvalue)):
+            case (.percent(let lvalue), .percent(let rvalue)):
                 return lvalue == rvalue
             case (.string(let lvalue), .string(let rvalue)):
                 return lvalue == rvalue
             case (.number(let lvalue), .number(let rvalue)):
                 return lvalue == rvalue
             case (.boolean(let lvalue), .boolean(let rvalue)):
+                return lvalue == rvalue
+            case (.color(let lvalue), .color(let rvalue)):
                 return lvalue == rvalue
             case (.identifier(let lvalue), .identifier(let rvalue)):
                 return lvalue == rvalue
@@ -213,14 +216,16 @@ extension Token.Lexeme: CustomStringConvertible {
             return "&"
         case .bar:
             return "|"
-        case .hash(let value):
-            return "#\(value)"
+        case .percent(let value):
+            return "%\(value)"
         case .string(let value):
             return "\"\(value)\""
         case .number(let value):
             return "\(value)"
         case .boolean(let value):
             return "\(value)"
+        case .color(let value):
+            return "#\(value.uppercased())"
         case .identifier(let value):
             return "\(value)"
         case .keyword(let value):

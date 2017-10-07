@@ -70,11 +70,11 @@ public struct Console {
     }
     
     public struct Formatter: ExpressionVisitor {
-        
+
         public init(useColor: Bool) {
             self.useColor = useColor
         }
-        
+
         public func visit(_ expression: Expression) -> String {
             switch expression.symbol {
             case .assign(let key, let value):
@@ -100,69 +100,29 @@ public struct Console {
                 var output = ""
                 output += "("
                 output += visit(lhs)
-                output += ")"
                 output += "("
                 output += args.reduce("") {
-                    let key = useColor ? ANSIColor.cyan.apply($1.0) : $1.0
-                    let value = visit($1.1)
-                    return $0 + key + ": " + value + ", "
+                    let value = visit($1)
+                    return $0 + value + ", "
                 }
                 if !args.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
                     let _ = output.unicodeScalars.removeLast()
                 }
-                output += ")"
+                output += "))"
                 return output
-            case .function(let args, let body):
-                var output = ""
-                output += useColor ? ANSIColor.green.apply("@") : "@"
-                output += "("
-                output += args.reduce("") {
-                    let arg = useColor ? ANSIColor.cyan.apply($1) : $1
-                    return $0 + arg + ", "
-                }
-                if !args.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += ") {"
-                output += body.reduce("") {
-                    return $0 + visit($1) + ", "
-                }
-                if !body.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += "}"
-                return output
-            case .get(let lhs, let index):
-                var output = ""
-                output += visit(lhs)
-                output += "["
-                output += visit(index)
-                output += "]"
-                return output
+            case .color(let value):
+                let r = (0xFF0000 & value) >> 16
+                let g = (0x00FF00 & value) >> 8
+                let b = (0x0000FF & value)
+                return useColor ? ANSIColor.white.apply("#\(r, g, b)") : "#\(r, g, b)"
             case .keyword(let value):
                 return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
-            case .list(let values):
-                var output = ""
-                output += "["
-                output += values.reduce("") {
-                    return $0 + visit($1) + ", "
-                }
-                if !values.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += "]"
-                return output
-            case .map(let values):
+            case .merge(let values):
                 var output = ""
                 output += "{"
                 output += values.reduce("") {
-                    let key = useColor ? ANSIColor.cyan.apply($1.0) : $1.0
-                    let value = visit($1.1)
-                    return $0 + key + ": " + value + ", "
+                    return $0 + visit($1) + ", "
                 }
                 if !values.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
@@ -172,15 +132,18 @@ public struct Console {
                 return output
             case .number(let value):
                 return useColor ? ANSIColor.blue.apply(value.description) : value.description
-            case .set(let lhs, let index, let rhs):
+            case .slice(let lhs, let indices):
                 var output = ""
                 output += visit(lhs)
                 output += "["
-                output += visit(index)
+                output += indices.reduce("") {
+                    return $0 + visit($1) + ", "
+                }
+                if !indices.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
                 output += "]"
-                output += ":"
-                output += " "
-                output += visit(rhs)
                 return output
             case .string(let value):
                 return useColor ? ANSIColor.magenta.apply("\"" + value + "\"") : "\"" + value + "\""
@@ -195,7 +158,7 @@ public struct Console {
                 return useColor ? ANSIColor.cyan.apply(value) : value
             }
         }
-        
+
         public var useColor: Bool
     }
     
@@ -220,9 +183,9 @@ public struct Console {
         error(format(issue.description, in:source, at:issue.location))
     }
     
-    public func error(_ issue: Validator.Error, in source: Source) {
-        error(format(issue.description, in:source, at:issue.location))
-    }
+//    public func error(_ issue: Validator.Error, in source: Source) {
+//        error(format(issue.description, in:source, at:issue.location))
+//    }
 
     private func format(_ message: String, in source: Source, at location: Source.Location) -> String {
         let row = source.line(for:location)

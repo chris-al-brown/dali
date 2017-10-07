@@ -1,249 +1,95 @@
-# Dali language specification and code samples
+% Comment
+% This is a comment
 
-# Notes
-# unused characters: $ % ^ & ' ; ?
-# control flow: lazy sequences and predicates
-# type system: static typing with an optional type
-# supported types: boolean, number, string, list, map, function
-# drawing output: stdin, stdout, stderr, stdcvs (standard canvas)
-# how to deal with function lookup, name mangling, multiple dispatch
-# support for subclassing and variable lookup chains
-# support for optional and none values
+% Declaration
+var: true 
 
-# Comments
+% Primitives
 
-    # This is a comment because it begins with #
+% Boolean
+var: true
+var: false
 
-# Datatypes
+% Color
+var: #efefef
+var: #000000
+var: #0000FF
 
-    # Primitives
+% Number
+var: 1.0
+var: 0
+var: -0.4
 
-        # A number value
-        variable: 1.0
+% String (future)
+var: "This is a string"
 
-        # A string value (multiline strings not supported)
-        single: "This is a single line string."
+% Function
 
-        # A boolean value
-        variable: true
+% TODO: Declaration (future)
+% function: @{ (first, second) | first + second }
 
-    # Compositions
-    	
-        # A map (i.e. hash, dictionary, record, etc.)
-        person: {
-            name: "Chris",
-            age: 34,
-            address: "101 Rivera Boulevard"
-        }
-        person[name]
-        person[address]: "102 Rivera Boulevard"
-        
-        # A list (i.e. array, etc.)
-        numbers: [0.0,
-            2.0, 4.0, 6.0,
-            8.0, 10.0
-        ]
-        numbers[0]
-        numbers[3]: numbers[3] + 10.0
+% Usage
+var: function(1.0, 2.0)
 
-        booleans: [true, false, true, false]
-        booleans[3]
+% Concatenate
+var: {x, y, z}  
 
-        mixed: [false, 1.0, "Hello world"]
-        mixed[0]: 0.0
+% Slices (modulo subscripts)
+var[1, 2]	% = (y, z)
+var[0]		% = x
 
-        # A mixed datatype  
-        outer: {
-            inner: {
-                values: [10, 11, 12],
-                flag: false
-            } 
-        }
-        outer[inner][values][0]: -10
+% Operators
 
-# Operators
+% Addition
+third: first + second
 
-    # Arithmetic
+% Subtraction
+third: first - second
 
-        # Addition
-        third: first + second
+% Multiplication
+third: first * second
 
-        # Subtraction
-        third: first - second
+% Division
+third: first / second
 
-        # Multiplication
-        third: first * second
+% Negation
+third: -first
 
-        # Division
-        third: first / second
+% Equality
+first = second
 
-        # Negation
-        third: -first
+% Less than
+first < second
 
-    # Comparison
+% Greater than
+first > second
 
-        # Equality
-        first = second
+% Negation
+!(first = second)
 
-        # Less than
-        first < second
+% And
+first & second
 
-        # Greater than
-        first > second
+% Or
+first | second | third
 
-    # Logical
+% Grouping
+value: ((true & true) | false)
 
-        # Negation
-        !(first = second)
+% Standard Library
 
-        # And
-        first & second
+% Mix
+mix(true, false, range(0, 1, 1 / 1000)) 
 
-        # Or
-        first | second | third
+% Print
+print(var)
+print({true, false})
+print(1.0)
 
-        # Grouping
-        value: ((true & true) | false)
+% Range
+range(0.0, 1.0, 0.1)
 
-# Statements
+% Random
+random(#EFEFEF, #FFFFFF, #C0C0C0)
+random(true, false)
 
-    # Single
-    first: 1.0
-    second: 2.0
-    first + second
-
-    # Multiple
-    first: 1.0, second: 0.2, third: 3
-    first + second + third
-
-# Functions
-
-    # Anonymous (i.e. lambda)
-    @( first, second ) { first + second }
-
-    # Named
-    adder: @( first, second ) {
-        first + second
-    }
-
-    # Execution
-    adder(first:1.0, second:2.0)              # 3.0
-    adder(first:"Hello ", second:"world")     # "Hello world"
-
-# Sketching
-
-# Slices are not supported
-# reduce: { (value:array:) reduce(value:value + array[0], array: array[1:]) }
-
-# Sequences
-# - lambda, map, reduce, filter
-# Create sequences (lattice(), series(), ...)
-# Change sequences (map: sequence1 + sequence2 => (type1 = type2))
-# Sample sequences (filter:)
-# Manipulate sequences (lambda:)
-
-# Functional programming primitives: reduce, filter, map
-
-# reduce(from:where:)
-# filter(from:where:)
-# sample(from:where:)
-# sample(from:where:count:)
-
-# Standard library
-
-    debug()
-    draw()
-    dump()
-    import()
-    loop()
-    print()
-    show()
-
-# Modules
-
-    # Colors
-
-    # color(gray:)
-    # color(red:green:blue:)
-    # color(red:green:blue:alpha:)
-    # color(hue:saturation:brightness:)
-    # color(hue:saturation:brightness:alpha:)
-
-    # Constant
-
-    pi
-    e
-    sqrt2
-    sqrt3
-
-    # Geometry
-
-    # point(x:y:)
-    # size(width:height:)
-    # line(from:to:)
-    # line(slope:intercept:)
-    # circle(x:y:radius:)
-    # circle(origin:radius:)
-    # triangle(origin:radius:)
-    # triangle(p1:p2:p3:)
-    # square(origin:radius:)
-    # rectangle(origin:size:)
-    # polygon(points:)
-
-    # Isometry
-
-    # glide
-    # reflect
-    # rotate
-    # translate
-
-    # Lattice (bravais)
-
-    # hexagonal
-    # oblique
-    # rectangular (centered-rectangular, square)
-
-    # Math
-
-    abs()
-    cos()
-    exp()
-    log()
-    max()
-    min()
-    mod()
-    sin()
-
-    # Measurement
-
-    # area(of:)
-    # distance(from:to:)
-    # distance(from:to:metric:)
-    # length(of:)
-
-    # Noise
-
-    # perlin(x)
-    # perlin(x:y:)
-    # perlin(x:y:z:)
-    # simplex(x)
-    # simplex(x:y:)
-    # simplex(x:y:z:)
-
-    # Random
-
-    # random()
-    # gaussian(mean:stddev:)
-    # uniform(min:max:)
-
-    # Series
-
-    # range(from:to:)
-    # arithmetic
-    # fourier
-    # geometric
-    # harmonic
-
-    # Symmetry
-
-    # mirror?

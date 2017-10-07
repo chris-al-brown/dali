@@ -39,7 +39,6 @@ public struct Expression: Hashable {
     }
 
     public enum BinaryOperator: String {
-        
         case add            = "+"
         case subtract       = "-"
         case multiply       = "*"
@@ -129,35 +128,29 @@ public struct Expression: Hashable {
         /// name: "Chris"
         case assign(Token.Identifier, Expression)
         
-        /// true & !true
+        /// 1 + 1
         case binary(Expression, BinaryOperator, Expression)
         
         /// false
         case boolean(Bool)
         
-        /// circle(x:0, y:0, radius:1)
-        case call(Expression, [Token.Identifier: Expression])
+        /// mix(#000000, #ffffff, 0.5)
+        case call(Expression, [Expression])
 
-        /// { (first, second) | first + second }
-        case function([Token.Identifier], [Expression])
+        /// #ffffff
+        case color(UInt32)
         
-        /// geometry[circle]
-        case get(Expression, Expression)
-
         /// pi
         case keyword(Token.Keyword)
         
-        /// [x + 1, y + 1, z + 1]
-        case list([Expression])
-        
-        /// [name: "Chris", age: 15]
-        case map([Token.Identifier: Expression])
+        /// {x, y, z}
+        case merge([Expression])
         
         /// 1.512
         case number(Double)
 
-        /// person[name]: "Nick" + " " + "Robins"
-        case set(Expression, Expression, Expression)
+        /// kulers[0, 1, 10]
+        case slice(Expression, [Expression])
         
         /// "message"
         case string(String)
@@ -217,3 +210,5 @@ public struct Expression: Hashable {
     public let symbol: Symbol
     public let location: Source.Location
 }
+
+

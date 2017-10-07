@@ -32,7 +32,6 @@ public final class Dali {
     public enum Mode {
         case file(String)
         case repl
-        case test
         case usage
     }
     
@@ -48,8 +47,6 @@ public final class Dali {
             self.mode = .repl
         case 2:
             switch args[1] {
-            case "-t", "--test":
-                self.mode = .test
             case "-h", "--help":
                 self.mode = .usage
             default:
@@ -64,16 +61,20 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            let validator = Validator(try parser.parse())
-            let expressions = try validator.validate()
-            expressions.forEach { console.log($0) }
+            let expressions = try parser.parse()
+            expressions.forEach {
+                console.log($0)
+            }
+//            let validator = Validator(try parser.parse())
+//            let expressions = try validator.validate()
+//            expressions.forEach { console.log($0) }
             return .success
         } catch let issue as Scanner.Error {
             console.error(issue, in:source)
         } catch let issue as Parser.Error {
             console.error(issue, in:source)
-        } catch let issue as Validator.Error {
-            console.error(issue, in:source)
+//        } catch let issue as Validator.Error {
+//            console.error(issue, in:source)
         } catch {
             fatalError("Unexpected error: \(error)")
         }
@@ -86,55 +87,6 @@ public final class Dali {
             Darwin.exit(EXIT_SUCCESS)
         case .failure:
             Darwin.exit(EXIT_FAILURE)
-        }
-    }
-    
-    private func random(_ xoroshiro: inout Xoroshiro128Plus, complexity: Int) -> Expression {
-        let id = 0
-        let location = "".unicodeScalars.startIndex..<"".unicodeScalars.endIndex
-        switch complexity {
-        case 0:
-            switch xoroshiro.randomDouble() {
-            case 0.00..<0.20:
-                return Expression(id, .boolean(xoroshiro.randomBool()), location)
-            case 0.20..<0.40:
-                return Expression(id, xoroshiro.randomBool() ? .variable("person") : .variable("circle"), location)
-            case 0.40..<0.60:
-                return Expression(id, xoroshiro.randomBool() ? .keyword(.pi) : .keyword(.e), location)
-            case 0.60..<0.80:
-                return Expression(id, .number(xoroshiro.randomDouble()), location)
-            default:
-                return Expression(id, .string("Hello world"), location)
-            }
-        case 1:
-            let newComplexity = complexity - 1
-            switch xoroshiro.randomDouble() {
-            case 0.00..<0.33:
-                return Expression(id, .function(["x", "y"], [random(&xoroshiro, complexity:newComplexity)]), location)
-            case 0.33..<0.66:
-                return Expression(id, .list([random(&xoroshiro, complexity:newComplexity)]), location)
-            default:
-                return Expression(id, .map(["name": random(&xoroshiro, complexity:newComplexity)]), location)
-            }
-        default:
-            let newComplexity = complexity - 1
-            switch xoroshiro.randomDouble() {
-            case 0.0..<0.2:
-                return Expression(id, .assign("age", random(&xoroshiro, complexity:newComplexity)), location)
-            case 0.2..<0.4:
-                return Expression(id, .unary(.not, random(&xoroshiro, complexity:newComplexity)), location)
-            case 0.4..<0.6:
-                let index: Expression = random(&xoroshiro, complexity:newComplexity)
-                if xoroshiro.randomBool() {
-                    return Expression(id, .get(random(&xoroshiro, complexity:newComplexity), index), location)
-                } else {
-                    return Expression(id, .set(random(&xoroshiro, complexity:newComplexity), index, random(&xoroshiro, complexity:newComplexity)), location)
-                }
-            case 0.6..<0.8:
-                return Expression(id, .binary(random(&xoroshiro, complexity:newComplexity), .add, random(&xoroshiro, complexity:newComplexity)), location)
-            default:
-                return Expression(id, .call(random(&xoroshiro, complexity:newComplexity), ["x": random(&xoroshiro, complexity:newComplexity), "y": random(&xoroshiro, complexity:newComplexity)]), location)
-            }
         }
     }
     
@@ -169,19 +121,11 @@ public final class Dali {
                     }
                 }
             }
-        case .test:
-            var xoroshiro = Xoroshiro128Plus()
-            let formatter = Console.Formatter(useColor:false)
-            let expression: Expression = random(&xoroshiro, complexity:3)
-            let source = Source(expression.accept(formatter), input:"</dev/urandom>")
-            let result = compile(source)
-            exit(with:result)
         case .usage:
             var output = ""
             output += "Usage:\n"
             output += "    dali \n"
             output += "    dali <script> \n"
-            output += "    dali (-t | --test) \n"
             output += "    dali (-h | --help)"
             console.log(output)
             exit(with:.success)
