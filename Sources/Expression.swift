@@ -32,12 +32,8 @@ public protocol ExpressionVisitor {
     func visit(_ expression: Expression) -> VisitedValue
 }
 
-public struct Expression: Hashable {
+public struct Expression {
     
-    public static func ==(lhs: Expression, rhs: Expression) -> Bool {
-        return lhs.id == rhs.id
-    }
-
     public enum BinaryOperator: String {
         case add            = "+"
         case subtract       = "-"
@@ -186,8 +182,7 @@ public struct Expression: Hashable {
         }
     }
     
-    public init(_ id: Int, _ symbol: Symbol, _ location: Source.Location) {
-        self.id = id
+    public init(_ symbol: Symbol, _ location: Source.Location) {
         self.symbol = symbol
         self.location = location
     }
@@ -196,11 +191,6 @@ public struct Expression: Hashable {
         return visitor.visit(self)
     }
 
-    public var hashValue: Int {
-        return id
-    }
-
-    public let id: Int
     public let symbol: Symbol
     public let location: Source.Location
 }

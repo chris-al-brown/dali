@@ -109,11 +109,6 @@ public final class Parser {
         throw Error.unexpectedToken(current, lexeme)
     }
 
-    private func id() -> Int {
-        currentId += 1
-        return currentId
-    }
-
     private func location(from start: Token) -> Source.Location {
         return location(from:start.location)
     }
@@ -151,14 +146,14 @@ public final class Parser {
             if let nextBinary = Expression.BinaryOperator(current.lexeme), binary.precedence < nextBinary.precedence {
                 rhs = try parseBinary(rhs, binary.precedence + 1)
             }
-            lhs = Expression(id(), .binary(lhs, binary, rhs), location(from:lhs.location))
+            lhs = Expression(.binary(lhs, binary, rhs), location(from:lhs.location))
         }
     }
 
     private func parseBoolean(_ value: Bool) throws -> Expression {
         let start = current
         let _ = try consume(.boolean(value))
-        return Expression(id(), .boolean(value), location(from:start))
+        return Expression(.boolean(value), location(from:start))
     }
 
     private func parseCall(_ lhs: Expression) throws -> Expression {
@@ -176,7 +171,7 @@ public final class Parser {
                 }
             }
             let _ = try consume(.parenRight)
-            return try parseCall(Expression(id(), .call(lhs, arguments), location(from:lhs.location)))
+            return try parseCall(Expression(.call(lhs, arguments), location(from:lhs.location)))
         default:
             return lhs
         }
@@ -188,7 +183,7 @@ public final class Parser {
         let scanner = Foundation.Scanner(string:value)
         var uint32: UInt32 = 0
         scanner.scanHexInt32(&uint32)
-        return Expression(id(), .color(uint32), location(from:start))
+        return Expression(.color(uint32), location(from:start))
     }
     
     private func parseExpression() throws -> Expression {
@@ -200,7 +195,7 @@ public final class Parser {
             let rhs = try parseExpression()
             switch lhs.symbol {
             case .variable(let name):
-                return Expression(id(), .assign(name, rhs), location(from:start))
+                return Expression(.assign(name, rhs), location(from:start))
             default:
                 throw Error.invalidAssignment(location(from:start))
             }
@@ -218,19 +213,19 @@ public final class Parser {
     private func parseIdentifier(_ value: Token.Identifier) throws -> Expression {
         let start = current
         let _ = try consume(.identifier(value))
-        return Expression(id(), .variable(value), location(from:start))
+        return Expression(.variable(value), location(from:start))
     }
 
     private func parseKeyword(_ value: Token.Keyword) throws -> Expression {
         let start = current
         let _ = try consume(.keyword(value))
-        return Expression(id(), .keyword(value), location(from:start))
+        return Expression(.keyword(value), location(from:start))
     }
     
     private func parseNumber(_ value: Double) throws -> Expression {
         let start = current
         let _ = try consume(.number(value))
-        return Expression(id(), .number(value), location(from:start))
+        return Expression(.number(value), location(from:start))
     }
 
     private func parsePrimary() throws -> Expression {
@@ -257,7 +252,7 @@ public final class Parser {
     private func parseString(_ value: String) throws -> Expression {
         let start = current
         let _ = try consume(.string(value))
-        return Expression(id(), .string(value), location(from:start))
+        return Expression(.string(value), location(from:start))
     }
 
     private func parseUnary() throws -> Expression {
@@ -266,7 +261,7 @@ public final class Parser {
             return try parseCall(try parsePrimary())
         }
         let _ = try consume(unary.lexeme)
-        return Expression(id(), .unary(unary, try parseUnary()), location(from:start))
+        return Expression(.unary(unary, try parseUnary()), location(from:start))
     }
 
     private func reset() {
