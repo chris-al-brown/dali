@@ -2,99 +2,98 @@
 % This is a comment
 
 % Declaration
-var: true
+var: true;
 
 % Primitives
 
 % Boolean
-var: true
-var: false
+var: true;
+var: false;
 
 % Color
-var: #efefef
-var: #000000
-var: #0000FF
+var: #efefef;
+var: #000000;
+var: #0000FF;
 
 % Number
-var: 1.0
-var: 0
-var: -0.4
+var: 1.0;
+var: 0;
+var: -0.4;
 
-% String (future)
-var: "This is a string"
+% String
+var: "This is a string";
 
 % Nil
-var: nil
+var: nil;
 
 % Closures
 
 % Declaration
-var: @(x, y, z) { x + y + z }
+var: @(x, y, z) { x + y + z };
 
 % Usage
-var: closure(1.0, 2.0)
+var: closure(1.0, 2.0);
 
 % Operators
 
 % Addition
-third: first + second
+third: first + second;
 
 % Subtraction
-third: first - second
+third: first - second;
 
 % Multiplication
-third: first * second
+third: first * second;
 
 % Division
-third: first / second
+third: first / second;
 
 % Negation
-third: -first
+third: -first;
 
 % Equality
-first = second
+first = second;
 
 % Less than
-first < second
+first < second;
 
 % Greater than
-first > second
+first > second;
 
 % Negation
-!(first = second)
+!(first = second);
 
 % And
-first & second
+first & second;
 
 % Or
-first | second | third
+first | second | third;
 
 % Grouping
-value: ((true & true) | false)
+value: ((true & true) | false);
 
 % Standard Library
 
 % Mix
-mix(true, false, range(0, 1, 1 / 1000)) 
+mix(true, false, range(0, 1, 1 / 1000));
 
 % Print
-print(var)
-print(true, false)
-print(1.0)
+print(var);
+print(true, false);
+print(1.0);
 
 % Range
-range(0.0, 1.0, 0.1)
+range(0.0, 1.0, 0.1);
 
 % Random
-random(#EFEFEF, #FFFFFF, #C0C0C0)
-random(true, false)
+random(#EFEFEF, #FFFFFF, #C0C0C0);
+random(true, false);
 
-% TODO: Declaration (future)
-% function: @{ (first, second) | first + second }
+% Future
 
-% Concatenate (future)
-% var: {x, y, z}
+% Concatenate 
+% var: {x, y, z};
 
-% Slices (future)
+% Slices
 % var[1, 2]    % = (y, z)
 % var[0]       % = x
