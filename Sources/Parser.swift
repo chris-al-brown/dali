@@ -90,21 +90,17 @@ public final class Parser {
         return current.lexeme == lexeme
     }
 
-    private func consume(_ lexeme: Token.Lexeme, strippingCommentsAndNewlines: Bool = true) throws -> Token {
+    private func consume(_ lexeme: Token.Lexeme) throws -> Token {
         if isFinished {
             throw Error.unexpectedStreamEnd(current)
         }
         if check(lexeme) {
             let token = advance()
-            if strippingCommentsAndNewlines && !isFinished {
+            if !isFinished {
                 switch current.lexeme {
-                /// Ignore trailing comments
                 case .percent(let value):
-                    let _ = try consume(.percent(value), strippingCommentsAndNewlines:false)
-                    let _ = try consume(.newline, strippingCommentsAndNewlines:false)
-                /// Ignore trailing blank lines
-                case .newline:
-                    let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+                    let _ = try consume(.percent(value))
+                    let _ = try consume(.newline)
                 default:
                     break
                 }
@@ -126,13 +122,13 @@ public final class Parser {
         reset()
         while !isFinished {
             switch current.lexeme {
-            /// Ignore comment lines
-            case .percent(let value):
-                let _ = try consume(.percent(value), strippingCommentsAndNewlines:false)
-                let _ = try consume(.newline, strippingCommentsAndNewlines:false)
-            /// Ignore blank lines
+            /// Consume blank lines
             case .newline:
-                let _ = try consume(.newline, strippingCommentsAndNewlines:false)
+                let _ = try consume(.newline)
+            /// Consume comment lines
+            case .percent(let value):
+                let _ = try consume(.percent(value))
+                let _ = try consume(.newline)
             default:
                 expressions.append(try parseExpression())
             }

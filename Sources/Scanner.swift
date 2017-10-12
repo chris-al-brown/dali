@@ -135,11 +135,9 @@ public final class Scanner {
             /// Whitespace
             case " ", "\t", "\r":
                 break
-            
-            /// Newline
             case "\n":
                 append(lexeme:.newline)
-                
+
             /// Single-character tokens
             case "@":
                 append(lexeme:.at)

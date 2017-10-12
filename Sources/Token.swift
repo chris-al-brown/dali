@@ -53,7 +53,6 @@ public struct Token {
         /// Single-character tokens
         case at                     /// @
         case colon                  /// :
-        case semicolon              /// ;
         case comma                  /// ,
         case curlyLeft              /// {
         case curlyRight             /// }
@@ -92,9 +91,9 @@ public struct Token {
         case keyword(Keyword)       /// nil
         
         /// End of line
-        case newline                /// newline
-        
-        /// End of stream
+        case newline                /// \n
+
+        /// End of file
         case end                    /// end
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
@@ -104,8 +103,6 @@ public struct Token {
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
-                return true
-            case (.semicolon, .semicolon):
                 return true
             case (.curlyLeft, .curlyLeft):
                 return true
@@ -176,8 +173,6 @@ extension Token.Lexeme: CustomStringConvertible {
             return "@"
         case .colon:
             return ":"
-        case .semicolon:
-            return "EOS"
         case .comma:
             return ","
         case .curlyLeft:
@@ -223,7 +218,7 @@ extension Token.Lexeme: CustomStringConvertible {
         case .keyword(let value):
             return "\(value)"
         case .newline:
-            return "\\n"
+            return "EOL"
         case .end:
             return "EOF"
         }
