@@ -29,6 +29,10 @@ import Foundation
 
 public final class Interpreter: ExpressionVisitor {
 
+    public func interpret(_ expressions: [Expression]) -> [Double?] {
+        return expressions.map { visit($0) }
+    }
+    
     public func interpret(_ expression: Expression) -> Double? {
         return visit(expression)
     }
@@ -54,12 +58,14 @@ public final class Interpreter: ExpressionVisitor {
             return value ? 1.0 : 0.0
         case .call(_, _):
             return nil
+        case .closure(_, _):
+            return nil
         case .color(let value):
             return Double(value)
         case .keyword(let keyword):
             switch keyword {
-            case .pi:
-                return .pi
+            case .nil:
+                return nil
             }
         case .number(let value):
             return value

@@ -98,7 +98,6 @@ public struct Console {
                 return useColor ? ANSIColor.yellow.apply(value.description) : value.description
             case .call(let lhs, let args):
                 var output = ""
-                output += "("
                 output += visit(lhs)
                 output += "("
                 output += args.reduce("") {
@@ -109,13 +108,33 @@ public struct Console {
                     let _ = output.unicodeScalars.removeLast()
                     let _ = output.unicodeScalars.removeLast()
                 }
-                output += "))"
+                output += ")"
+                return output
+            case .closure(let args, let body):
+                var output = ""
+                output += useColor ? ANSIColor.green.apply(Token.Lexeme.at.description) : Token.Lexeme.at.description
+                output += "("
+                output += args.reduce("") {
+                    return $0 + (useColor ? ANSIColor.white.apply($1) : $1) + ", "
+                }
+                if !args.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
+                output += ") {"
+                output += body.reduce("") {
+                    return $0 + visit($1) + "\n"
+                }
+                output += "}"
                 return output
             case .color(let value):
                 let r = (0xFF0000 & value) >> 16
                 let g = (0x00FF00 & value) >> 8
                 let b = (0x0000FF & value)
-                return useColor ? ANSIColor.white.apply("#\(r, g, b)") : "#\(r, g, b)"
+                let R = useColor ? ANSIColor.white.apply(r.description) : r.description
+                let G = useColor ? ANSIColor.white.apply(g.description) : g.description
+                let B = useColor ? ANSIColor.white.apply(b.description) : b.description
+                return (useColor ? ANSIColor.green.apply("#") : "#") + "(\(R), \(G), \(B))"
             case .keyword(let value):
                 return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
             case .number(let value):
@@ -157,10 +176,6 @@ public struct Console {
     public func error(_ issue: Scanner.Error, in source: Source) {
         error(format(issue.description, in:source, at:issue.location))
     }
-    
-//    public func error(_ issue: Validator.Error, in source: Source) {
-//        error(format(issue.description, in:source, at:issue.location))
-//    }
     
     private func format(_ message: String, in source: Source, at location: Source.Location) -> String {
         let row = source.line(for:location)

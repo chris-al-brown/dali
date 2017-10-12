@@ -141,10 +141,18 @@ public final class Scanner {
                 append(lexeme:.newline)
                 
             /// Single-character tokens
+            case "@":
+                append(lexeme:.at)
             case ":":
+                append(lexeme:.colon)
+            case ";":
                 append(lexeme:.colon)
             case ",":
                 append(lexeme:.comma)
+            case "{":
+                append(lexeme:.curlyLeft)
+            case "}":
+                append(lexeme:.curlyRight)
             case "(":
                 append(lexeme:.parenLeft)
             case ")":

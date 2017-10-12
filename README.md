@@ -39,7 +39,7 @@ The grammar of the language is given by the following EBNF grammar:
 ```
  program        → statement* eos
  
- statement      → expression eol
+ statement      → expression ';'
  
  expression     → identifier ':' expression
                 | identifier

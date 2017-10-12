@@ -133,6 +133,9 @@ public struct Expression {
         /// mix(#000000, #ffffff, 0.5)
         case call(Expression, [Expression])
 
+        /// @(x, y) { x + y }
+        case closure([Token.Identifier], [Expression])
+        
         /// #ffffff
         case color(UInt32)
         

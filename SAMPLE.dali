@@ -2,7 +2,7 @@
 % This is a comment
 
 % Declaration
-var: true 
+var: true
 
 % Primitives
 
@@ -23,8 +23,16 @@ var: -0.4
 % String (future)
 var: "This is a string"
 
-% Function
-var: function(1.0, 2.0)
+% Nil
+var: nil
+
+% Closures
+
+% Declaration
+var: @(x, y, z) { x + y + z }
+
+% Usage
+var: closure(1.0, 2.0)
 
 % Operators
 

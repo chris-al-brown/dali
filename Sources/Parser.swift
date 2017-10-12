@@ -30,6 +30,7 @@ import Foundation
 public final class Parser {
 
     public enum Error: Swift.Error, CustomStringConvertible {
+        case invalidArgument(Token)
         case invalidAssignment(Source.Location)
         case invalidSyntax(Token)
         case trailingComma(Source.Location)
@@ -38,6 +39,8 @@ public final class Parser {
 
         public var description: String {
             switch self {
+            case .invalidArgument(let token):
+                return "SyntaxError: Unexpected closure argument at '\(token.lexeme)'"
             case .invalidAssignment(_):
                 return "SyntaxError: Can not assign to the left side of the expression."
             case .invalidSyntax(let token):
@@ -53,6 +56,8 @@ public final class Parser {
 
         public var location: Source.Location {
             switch self {
+            case .invalidArgument(let token):
+                return token.location
             case .invalidAssignment(let location):
                 return location
             case .invalidSyntax(let token):
@@ -186,6 +191,36 @@ public final class Parser {
         return Expression(.color(uint32), location(from:start))
     }
     
+    private func parseClosure() throws -> Expression {
+        let start = current
+        let _ = try consume(.at)
+        let _ = try consume(.parenLeft)
+        var args: [Token.Identifier] = []
+        while !check(.parenRight) {
+            switch current.lexeme {
+            case .identifier(let value):
+                let _ = try consume(.identifier(value))
+                args.append(value)
+                if check(.comma) {
+                    let _ = try consume(.comma)
+                    if check(.parenRight) {
+                        throw Error.trailingComma(previous.location)
+                    }
+                }
+            default:
+                throw Error.invalidArgument(current)
+            }
+        }
+        let _ = try consume(.parenRight)
+        let _ = try consume(.curlyLeft)
+        var body: [Expression] = []
+        while !check(.curlyRight) {
+            body.append(try parseExpression())
+        }
+        let _ = try consume(.curlyRight)
+        return Expression(.closure(args, body), location(from:start.location))
+    }
+    
     private func parseExpression() throws -> Expression {
         let start = current
         let unary = try parseUnary()
@@ -232,6 +267,8 @@ public final class Parser {
         switch current.lexeme {
         case .boolean(let value):
             return try parseBoolean(value)
+        case .at:
+            return try parseClosure()
         case .color(let value):
             return try parseColor(value)
         case .parenLeft:
@@ -248,6 +285,12 @@ public final class Parser {
             throw Error.invalidSyntax(current)
         }
     }
+    
+//    private func parseStatement() throws -> Expression {
+//        let expression = try parseExpression()
+//        let _ = try consume(.semicolon)
+//        return expression
+//    }
 
     private func parseString(_ value: String) throws -> Expression {
         let start = current

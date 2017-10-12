@@ -42,6 +42,7 @@ public final class Dali {
     
     public init(_ args: [String]) {
         self.console = Console()
+        self.interpreter = Interpreter()
         switch args.count {
         case 1:
             self.mode = .repl
@@ -60,15 +61,13 @@ public final class Dali {
     public func compile(_ source: Source) -> Status {
         do {
             let scanner = Scanner(source)
-            let parser = Parser(try scanner.scan())
-            let interpreter = Interpreter()
-            (try parser.parse()).forEach {
-                console.log($0)
-                if let value = interpreter.interpret($0) {
-                    print(value)
-                } else {
-                    print("nil")
-                }
+            let tokens = try scanner.scan()
+            let parser = Parser(tokens)
+            let expressions = try parser.parse()
+            let values = interpreter.interpret(expressions)
+            values.enumerated().forEach {
+                console.log(expressions[$0])
+                print($1 ?? "nil")
             }
             return .success
         } catch let issue as Scanner.Error {
@@ -133,6 +132,7 @@ public final class Dali {
     }
     
     private let console: Console
+    private let interpreter: Interpreter
     private let mode: Mode
 }
 

@@ -32,7 +32,7 @@ public struct Token {
     public typealias Identifier = String
 
     public enum Keyword: String {
-        case pi = "pi"
+        case `nil` = "nil"
         
         public static func lexeme(for string: String) -> Lexeme? {
             switch string {
@@ -40,8 +40,8 @@ public struct Token {
                 return .boolean(true)
             case "false":
                 return .boolean(false)
-            case "pi":
-                return .keyword(.pi)
+            case "nil":
+                return .keyword(.nil)
             default:
                 return nil
             }
@@ -51,8 +51,12 @@ public struct Token {
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
+        case at                     /// @
         case colon                  /// :
+        case semicolon              /// ;
         case comma                  /// ,
+        case curlyLeft              /// {
+        case curlyRight             /// }
         case parenLeft              /// (
         case parenRight             /// )
         
@@ -85,7 +89,7 @@ public struct Token {
         case identifier(Identifier) /// person
         
         /// Keywords
-        case keyword(Keyword)       /// pi
+        case keyword(Keyword)       /// nil
         
         /// End of line
         case newline                /// newline
@@ -95,9 +99,17 @@ public struct Token {
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
+            case (.at, .at):
+                return true
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
+                return true
+            case (.semicolon, .semicolon):
+                return true
+            case (.curlyLeft, .curlyLeft):
+                return true
+            case (.curlyRight, .curlyRight):
                 return true
             case (.parenLeft, .parenLeft):
                 return true
@@ -160,10 +172,18 @@ extension Token.Lexeme: CustomStringConvertible {
 
     public var description: String {
         switch self {
+        case .at:
+            return "@"
         case .colon:
             return ":"
+        case .semicolon:
+            return "EOS"
         case .comma:
             return ","
+        case .curlyLeft:
+            return "{"
+        case .curlyRight:
+            return "}"
         case .parenLeft:
             return "("
         case .parenRight:
@@ -205,7 +225,7 @@ extension Token.Lexeme: CustomStringConvertible {
         case .newline:
             return "\\n"
         case .end:
-            return "END"
+            return "EOF"
         }
     }
 }
