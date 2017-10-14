@@ -32,16 +32,22 @@ public struct Token {
     public typealias Identifier = String
 
     public enum Keyword: String {
-        case `nil` = "nil"
+        case `func` = "func"
+        case `var`  = "var"
+        case print  = "print"
         
         public static func lexeme(for string: String) -> Lexeme? {
             switch string {
+            case "func":
+                return .keyword(.func)
+            case "print":
+                return .keyword(.print)
+            case "var":
+                return .keyword(.var)
             case "true":
                 return .boolean(true)
             case "false":
                 return .boolean(false)
-            case "nil":
-                return .keyword(.nil)
             default:
                 return nil
             }
@@ -51,14 +57,14 @@ public struct Token {
     public enum Lexeme: Equatable {
         
         /// Single-character tokens
-        case at                     /// @
         case colon                  /// :
         case comma                  /// ,
         case curlyLeft              /// {
         case curlyRight             /// }
         case parenLeft              /// (
         case parenRight             /// )
-        
+        case semicolon              /// ;
+
         /// Single-character tokens (arithmetic)
         case plus                   /// +
         case minus                  /// -
@@ -75,9 +81,6 @@ public struct Token {
         case ampersand              /// &
         case bar                    /// |
         
-        /// Single-character tokens (comments)
-        case percent(String)        /// % This is a comment
-        
         /// Literals
         case boolean(Bool)          /// true or false
         case color(String)          /// #efefef
@@ -88,18 +91,13 @@ public struct Token {
         case identifier(Identifier) /// person
         
         /// Keywords
-        case keyword(Keyword)       /// nil
+        case keyword(Keyword)       /// var, func
         
-        /// End of line
-        case newline                /// \n
-
         /// End of file
-        case end                    /// end
+        case end                    /// EOF
         
         public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
             switch (lhs, rhs) {
-            case (.at, .at):
-                return true
             case (.colon, .colon):
                 return true
             case (.comma, .comma):
@@ -111,6 +109,8 @@ public struct Token {
             case (.parenLeft, .parenLeft):
                 return true
             case (.parenRight, .parenRight):
+                return true
+            case (.semicolon, .semicolon):
                 return true
             case (.plus, .plus):
                 return true
@@ -132,8 +132,6 @@ public struct Token {
                 return true
             case (.bar, .bar):
                 return true
-            case (.percent(let lvalue), .percent(let rvalue)):
-                return lvalue == rvalue
             case (.string(let lvalue), .string(let rvalue)):
                 return lvalue == rvalue
             case (.number(let lvalue), .number(let rvalue)):
@@ -146,8 +144,6 @@ public struct Token {
                 return lvalue == rvalue
             case (.keyword(let lvalue), .keyword(let rvalue)):
                 return lvalue == rvalue
-            case (.newline, .newline):
-                return true
             case (.end, .end):
                 return true
             default:
@@ -169,8 +165,6 @@ extension Token.Lexeme: CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .at:
-            return "@"
         case .colon:
             return ":"
         case .comma:
@@ -183,6 +177,8 @@ extension Token.Lexeme: CustomStringConvertible {
             return "("
         case .parenRight:
             return ")"
+        case .semicolon:
+            return ";"
         case .plus:
             return "+"
         case .minus:
@@ -203,8 +199,6 @@ extension Token.Lexeme: CustomStringConvertible {
             return "&"
         case .bar:
             return "|"
-        case .percent(let value):
-            return "%\(value)"
         case .string(let value):
             return "\"\(value)\""
         case .number(let value):
@@ -217,10 +211,8 @@ extension Token.Lexeme: CustomStringConvertible {
             return "\(value)"
         case .keyword(let value):
             return "\(value)"
-        case .newline:
-            return "EOL"
         case .end:
-            return "EOF"
+            return "eof"
         }
     }
 }

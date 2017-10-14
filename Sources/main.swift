@@ -61,15 +61,11 @@ public final class Dali {
     public func compile(_ source: Source) -> Status {
         do {
             let scanner = Scanner(source)
-            let tokens = try scanner.scan()
-            let parser = Parser(tokens)
-            let expressions = try parser.parse()
-            let values = interpreter.interpret(expressions)
-            values.enumerated().forEach {
-                console.log(expressions[$0])
-                print($1 ?? "nil")
-            }
+            let parser = Parser(try scanner.scan())
+            try interpreter.interpret(try parser.parse())
             return .success
+        } catch let issue as Interpreter.Error {
+            console.error(issue, in:source)
         } catch let issue as Scanner.Error {
             console.error(issue, in:source)
         } catch let issue as Parser.Error {

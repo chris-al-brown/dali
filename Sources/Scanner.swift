@@ -133,17 +133,11 @@ public final class Scanner {
             switch character {
             
             /// Whitespace
-            case " ", "\t", "\r":
+            case " ", "\t", "\r", "\n":
                 break
-            case "\n":
-                append(lexeme:.newline)
 
             /// Single-character tokens
-            case "@":
-                append(lexeme:.at)
             case ":":
-                append(lexeme:.colon)
-            case ";":
                 append(lexeme:.colon)
             case ",":
                 append(lexeme:.comma)
@@ -155,6 +149,10 @@ public final class Scanner {
                 append(lexeme:.parenLeft)
             case ")":
                 append(lexeme:.parenRight)
+            case ";":
+                if tokens.last?.lexeme != .semicolon {
+                    append(lexeme:.semicolon)
+                }
 
             /// Single-character tokens (arithmetic)
             case "+":
@@ -187,8 +185,7 @@ public final class Scanner {
                 while peek() != "\n" && !isFinished {
                     let _ = advance()
                 }
-                let index = source.index(after:start)
-                append(lexeme:.percent(source.extract(index..<current)))
+                break
             
             /// Literals (color)
             case "#":

@@ -37,9 +37,16 @@ dali is a ...
 The grammar of the language is given by the following EBNF grammar:
 
 ```
- program        → statement* eos
+ program        → declaration* eos
  
- statement      → expression ';'
+ declaration    → varDeclaration
+                | funcDeclaration
+                | statement
+ 
+ statement      → printStmt eos
+                | expressionStatement eos
+ 
+ ...FIXME...
  
  expression     → identifier ':' expression
                 | identifier
@@ -90,9 +97,9 @@ The grammar of the language is given by the following EBNF grammar:
  
  digit          → '0' ... '9'
  
- eol            → '\n'
+ eos            → '\n'
  
- eos            → <end of stream>
+ eof            → <end of stream>
 
 ```
 

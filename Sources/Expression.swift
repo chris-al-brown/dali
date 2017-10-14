@@ -121,9 +121,6 @@ public struct Expression {
     
     public indirect enum Symbol {
         
-        /// name: "Chris"
-        case assign(Token.Identifier, Expression)
-        
         /// 1 + 1
         case binary(Expression, BinaryOperator, Expression)
         
@@ -132,27 +129,27 @@ public struct Expression {
         
         /// mix(#000000, #ffffff, 0.5)
         case call(Expression, [Expression])
-
-        /// @(x, y) { x + y }
-        case closure([Token.Identifier], [Expression])
         
         /// #ffffff
         case color(UInt32)
         
+        /// x
+        case getter(Token.Identifier)
+
         /// pi
         case keyword(Token.Keyword)
         
         /// 1.512
         case number(Double)
 
+        /// name: "Chris"
+        case setter(Token.Identifier, Expression)
+
         /// "message"
         case string(String)
         
         /// !true
         case unary(UnaryOperator, Expression)
-
-        /// x
-        case variable(Token.Identifier)
     }
     
     public enum UnaryOperator: String {

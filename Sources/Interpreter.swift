@@ -27,8 +27,26 @@
 
 import Foundation
 
-public final class Interpreter: ExpressionVisitor {
+public final class Interpreter: ExpressionVisitor, StatementVisitor {
 
+    public enum Error: Swift.Error, CustomStringConvertible {
+        case xxx(Source.Location)
+        
+        public var description: String {
+            switch self {
+            case .xxx(_):
+                return "RuntimeError: xxx"
+            }
+        }
+        
+        public var location: Source.Location {
+            switch self {
+            case .xxx(let location):
+                return location
+            }
+        }
+    }
+    
     public func interpret(_ expressions: [Expression]) -> [Double?] {
         return expressions.map { visit($0) }
     }
@@ -36,11 +54,17 @@ public final class Interpreter: ExpressionVisitor {
     public func interpret(_ expression: Expression) -> Double? {
         return visit(expression)
     }
+    
+    public func interpret(_ statements: [Statement]) throws {
+        statements.forEach { visit($0) }
+    }
+    
+    public func interpret(_ statement: Statement) throws {
+        visit(statement)
+    }
 
     public func visit(_ expression: Expression) -> Double? {
         switch expression.symbol {
-        case .assign(_, _):
-            return nil
         case .binary(let lhs, let op, let rhs):
             switch (visit(lhs), op, visit(rhs)) {
             case (.some(let lvalue), .add, .some(let rvalue)):
@@ -58,17 +82,16 @@ public final class Interpreter: ExpressionVisitor {
             return value ? 1.0 : 0.0
         case .call(_, _):
             return nil
-        case .closure(_, _):
-            return nil
         case .color(let value):
             return Double(value)
-        case .keyword(let keyword):
-            switch keyword {
-            case .nil:
-                return nil
-            }
+        case .getter(_):
+            return nil
+        case .keyword(_):
+            return nil
         case .number(let value):
             return value
+        case .setter(_, _):
+            return nil
         case .string(let value):
             return Double(value)
         case .unary(let op, let rhs):
@@ -82,8 +105,22 @@ public final class Interpreter: ExpressionVisitor {
             default:
                 return nil
             }
-        case .variable(_):
-            return nil
+        }
+    }
+    
+    public func visit(_ statement: Statement) {
+        switch statement.symbol {
+        case .declaration(let declaration):
+            switch declaration {
+            case .function(let name, let args, let body):
+                print("function:", name, args, body)
+            case .variable(let name, let value):
+                print("variable:", name, value)
+            }
+        case .expression(let expression):
+            print("expression:", expression)
+        case .print(let expression):
+            print("print:", expression)
         }
     }
 }

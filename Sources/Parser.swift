@@ -32,7 +32,9 @@ public final class Parser {
     public enum Error: Swift.Error, CustomStringConvertible {
         case invalidArgument(Token)
         case invalidAssignment(Source.Location)
+        case invalidFuncDeclaration(Source.Location)
         case invalidSyntax(Token)
+        case invalidVarDeclaration(Source.Location)
         case trailingComma(Source.Location)
         case unexpectedStreamEnd(Token)
         case unexpectedToken(Token, Token.Lexeme)
@@ -43,8 +45,12 @@ public final class Parser {
                 return "SyntaxError: Unexpected closure argument at '\(token.lexeme)'"
             case .invalidAssignment(_):
                 return "SyntaxError: Can not assign to the left side of the expression."
+            case .invalidFuncDeclaration(_):
+                return "SyntaxError: Invalid syntax for a function declaration."
             case .invalidSyntax(let token):
                 return "SyntaxError: Unrecognized syntax starting at '\(token.lexeme)'."
+            case .invalidVarDeclaration(_):
+                return "SyntaxError: Invalid syntax for a variable declaration."
             case .trailingComma(_):
                 return "SyntaxError: Invalid syntax with trailing comma."
             case .unexpectedStreamEnd(let token):
@@ -60,8 +66,12 @@ public final class Parser {
                 return token.location
             case .invalidAssignment(let location):
                 return location
+            case .invalidFuncDeclaration(let location):
+                return location
             case .invalidSyntax(let token):
                 return token.location
+            case .invalidVarDeclaration(let location):
+                return location
             case .trailingComma(let location):
                 return location
             case .unexpectedStreamEnd(let token):
@@ -74,7 +84,7 @@ public final class Parser {
 
     public init(_ tokens: [Token]) {
         self.tokens = tokens
-        self.expressions = []
+        self.statements = []
         self.currentId = 0
         self.currentIndex = tokens.startIndex
     }
@@ -95,17 +105,7 @@ public final class Parser {
             throw Error.unexpectedStreamEnd(current)
         }
         if check(lexeme) {
-            let token = advance()
-            if !isFinished {
-                switch current.lexeme {
-                case .percent(let value):
-                    let _ = try consume(.percent(value))
-                    let _ = try consume(.newline)
-                default:
-                    break
-                }
-            }
-            return token
+            return advance()
         }
         throw Error.unexpectedToken(current, lexeme)
     }
@@ -118,22 +118,12 @@ public final class Parser {
         return start.lowerBound..<previous.location.upperBound
     }
 
-    public func parse() throws -> [Expression] {
+    public func parse() throws -> [Statement] {
         reset()
         while !isFinished {
-            switch current.lexeme {
-            /// Consume blank lines
-            case .newline:
-                let _ = try consume(.newline)
-            /// Consume comment lines
-            case .percent(let value):
-                let _ = try consume(.percent(value))
-                let _ = try consume(.newline)
-            default:
-                expressions.append(try parseExpression())
-            }
+            statements.append(try parseDeclaration())
         }
-        return expressions
+        return statements
     }
 
     private func parseBinary(_ lhs: Expression, _ precedence: Int = 0) throws -> Expression {
@@ -177,7 +167,7 @@ public final class Parser {
             return lhs
         }
     }
-
+    
     private func parseColor(_ value: String) throws -> Expression {
         let start = current
         let _ = try consume(.color(value))
@@ -187,34 +177,95 @@ public final class Parser {
         return Expression(.color(uint32), location(from:start))
     }
     
-    private func parseClosure() throws -> Expression {
-        let start = current
-        let _ = try consume(.at)
-        let _ = try consume(.parenLeft)
-        var args: [Token.Identifier] = []
-        while !check(.parenRight) {
-            switch current.lexeme {
-            case .identifier(let value):
-                let _ = try consume(.identifier(value))
-                args.append(value)
-                if check(.comma) {
-                    let _ = try consume(.comma)
-                    if check(.parenRight) {
-                        throw Error.trailingComma(previous.location)
-                    }
-                }
-            default:
-                throw Error.invalidArgument(current)
+    private func parseDeclaration() throws -> Statement {
+        switch current.lexeme {
+        case .keyword(let value):
+            switch value {
+            case .func:
+                return try parseFuncDeclaration()
+            case .var:
+                return try parseVarDeclaration()
+            case .print:
+                return try parsePrintStatement()
             }
+        default:
+            return try parseStatement()
         }
+    }
+
+    private func parseFuncDeclaration() throws -> Statement {
+        let start = current
+        let _ = try consume(.keyword(.func))
+        switch current.lexeme {
+        case .identifier(let name):
+            let _ = try consume(.identifier(name))
+            let _ = try consume(.parenLeft)
+            var args: [Token.Identifier] = []
+            while !check(.parenRight) {
+                switch current.lexeme {
+                case .identifier(let value):
+                    let _ = try consume(.identifier(value))
+                    args.append(value)
+                    if check(.comma) {
+                        let _ = try consume(.comma)
+                        if check(.parenRight) {
+                            throw Error.trailingComma(previous.location)
+                        }
+                    }
+                default:
+                    throw Error.invalidArgument(current)
+                }
+            }
+            let _ = try consume(.parenRight)
+            let _ = try consume(.curlyLeft)
+            var body: [Statement] = []
+            while !check(.curlyRight) {
+                body.append(try parseExpressionStatement())
+            }
+            let _ = try consume(.curlyRight)
+            return Statement(.declaration(.function(name, args, body)), location(from:start))
+        default:
+            throw Error.invalidFuncDeclaration(location(from:start))
+        }
+    }
+    
+    private func parseVarDeclaration() throws -> Statement {
+        let start = current
+        let _ = try consume(.keyword(.var))
+        switch current.lexeme {
+        case .identifier(let lvalue):
+            let _ = try consume(.identifier(lvalue))
+            let _ = try consume(.colon)
+            let rvalue = try parseExpression()
+            let _ = try consume(.semicolon)
+            return Statement(.declaration(.variable(lvalue, rvalue)), location(from:start))
+        default:
+            throw Error.invalidVarDeclaration(location(from:start))
+        }
+    }
+    
+    private func parsePrintStatement() throws -> Statement {
+        let start = current
+        let _ = try consume(.keyword(.print))
+        let _ = try consume(.parenLeft)
+        let expression = try parseExpression()
         let _ = try consume(.parenRight)
-        let _ = try consume(.curlyLeft)
-        var body: [Expression] = []
-        while !check(.curlyRight) {
-            body.append(try parseExpression())
+        let _ = try consume(.semicolon)
+        return Statement(.print(expression), location(from:start))
+    }
+
+    private func parseStatement() throws -> Statement {
+        if current.lexeme == .keyword(.print) {
+            return try parsePrintStatement()
+        } else {
+            return try parseExpressionStatement()
         }
-        let _ = try consume(.curlyRight)
-        return Expression(.closure(args, body), location(from:start.location))
+    }
+
+    private func parseExpressionStatement() throws -> Statement {
+        let rvalue = try parseExpression()
+        let _ = try consume(.semicolon)
+        return Statement(.expression(rvalue), current.location)
     }
     
     private func parseExpression() throws -> Expression {
@@ -225,8 +276,8 @@ public final class Parser {
             let _ = try consume(.colon)
             let rhs = try parseExpression()
             switch lhs.symbol {
-            case .variable(let name):
-                return Expression(.assign(name, rhs), location(from:start))
+            case .getter(let name):
+                return Expression(.setter(name, rhs), location(from:start))
             default:
                 throw Error.invalidAssignment(location(from:start))
             }
@@ -244,7 +295,7 @@ public final class Parser {
     private func parseIdentifier(_ value: Token.Identifier) throws -> Expression {
         let start = current
         let _ = try consume(.identifier(value))
-        return Expression(.variable(value), location(from:start))
+        return Expression(.getter(value), location(from:start))
     }
 
     private func parseKeyword(_ value: Token.Keyword) throws -> Expression {
@@ -263,8 +314,6 @@ public final class Parser {
         switch current.lexeme {
         case .boolean(let value):
             return try parseBoolean(value)
-        case .at:
-            return try parseClosure()
         case .color(let value):
             return try parseColor(value)
         case .parenLeft:
@@ -282,12 +331,6 @@ public final class Parser {
         }
     }
     
-//    private func parseStatement() throws -> Expression {
-//        let expression = try parseExpression()
-//        let _ = try consume(.semicolon)
-//        return expression
-//    }
-
     private func parseString(_ value: String) throws -> Expression {
         let start = current
         let _ = try consume(.string(value))
@@ -304,7 +347,7 @@ public final class Parser {
     }
 
     private func reset() {
-        expressions.removeAll(keepingCapacity:true)
+        statements.removeAll(keepingCapacity:true)
         currentIndex = tokens.startIndex
     }
 
@@ -321,7 +364,7 @@ public final class Parser {
     }
 
     private let tokens: [Token]
-    private var expressions: [Expression]
+    private var statements: [Statement]
     private var currentId: Int
     private var currentIndex: Int
 }
