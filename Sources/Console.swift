@@ -45,7 +45,7 @@ public struct Console {
     }
     
     /// Checks whether Xcode spawned the process (i.e. ANSI color codes not supported)
-    public enum Environment: CustomStringConvertible {
+    public enum Process: CustomStringConvertible {
         case terminal
         case xcode
         
@@ -157,8 +157,8 @@ public struct Console {
     }
     
     public init() {
-        self.environment = Environment()
-        self.formatter = Formatter(useColor:environment.supportsColor)
+        self.process = Process()
+        self.formatter = Formatter(useColor:process.supportsColor)
     }
     
     public func error(_ message: String, terminator: String = "\n") {
@@ -209,7 +209,7 @@ public struct Console {
         }
     }
     
-    private var environment: Environment
+    private var process: Process
     private var formatter: Formatter
 }
 

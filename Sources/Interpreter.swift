@@ -27,100 +27,117 @@
 
 import Foundation
 
-public final class Interpreter: ExpressionVisitor, StatementVisitor {
-
+public final class Interpreter {
+    
     public enum Error: Swift.Error, CustomStringConvertible {
-        case xxx(Source.Location)
+        case keywordUsage(Token.Keyword, Source.Location)
+        case redefinedVariable(Token.Identifier, Source.Location)
+        case undefinedVariable(Token.Identifier, Source.Location)
+        case undefinedExpression(Source.Location)
         
         public var description: String {
             switch self {
-            case .xxx(_):
-                return "RuntimeError: xxx"
+            case .keywordUsage(let keyword, _):
+                return "RuntimeError: Reserved keyword '\(keyword)' cannot be used in an expression."
+            case .redefinedVariable(let name, _):
+                return "RuntimeError: Variable '\(name)' has already been defined in this scope."
+            case .undefinedVariable(let name, _):
+                return "RuntimeError: Variable '\(name)' is undefined in this scope."
+            case .undefinedExpression(_):
+                return "RuntimeError: Expression is undefined."
             }
         }
-        
+
         public var location: Source.Location {
             switch self {
-            case .xxx(let location):
+            case .keywordUsage(_, let location):
+                return location
+            case .redefinedVariable(_, let location):
+                return location
+            case .undefinedVariable(_, let location):
+                return location
+            case .undefinedExpression(let location):
                 return location
             }
         }
     }
     
-    public func interpret(_ expressions: [Expression]) -> [Double?] {
-        return expressions.map { visit($0) }
-    }
-    
-    public func interpret(_ expression: Expression) -> Double? {
-        return visit(expression)
+    public init() {
+        self.environment = Environment()
     }
     
     public func interpret(_ statements: [Statement]) throws {
-        statements.forEach { visit($0) }
+        try statements.forEach { try visit($0) }
     }
     
     public func interpret(_ statement: Statement) throws {
-        visit(statement)
+        try visit(statement)
     }
 
-    public func visit(_ expression: Expression) -> Double? {
+    private let environment: Environment
+}
+
+extension Interpreter: ExpressionVisitor {
+    
+    public func visit(_ expression: Expression) throws -> AnyObject? {
         switch expression.symbol {
-        case .binary(let lhs, let op, let rhs):
-            switch (visit(lhs), op, visit(rhs)) {
-            case (.some(let lvalue), .add, .some(let rvalue)):
-                return lvalue + rvalue
-            case (.some(let lvalue), .subtract, .some(let rvalue)):
-                return lvalue - rvalue
-            case (.some(let lvalue), .multiply, .some(let rvalue)):
-                return lvalue * rvalue
-            case (.some(let lvalue), .divide, .some(let rvalue)):
-                return lvalue / rvalue
-            default:
-                return nil
-            }
+        case .binary(_, _, _):
+            return nil
         case .boolean(let value):
-            return value ? 1.0 : 0.0
+            return value as AnyObject?
         case .call(_, _):
             return nil
         case .color(let value):
-            return Double(value)
-        case .getter(_):
-            return nil
-        case .keyword(_):
-            return nil
-        case .number(let value):
-            return value
-        case .setter(_, _):
-            return nil
-        case .string(let value):
-            return Double(value)
-        case .unary(let op, let rhs):
-            switch (op, visit(rhs)) {
-            case (.negative, .some(let value)):
-                return -value
-            case (.not, _):
-                return nil
-            case (.positive, .some(let value)):
-                return +value
-            default:
-                return nil
+            return value as AnyObject?
+        case .getter(let name):
+            do {
+                return try environment.get(name)
+            } catch _ {
+                throw Error.undefinedVariable(name, expression.location)
             }
+        case .keyword(let name):
+            throw Error.keywordUsage(name, expression.location)
+        case .number(let value):
+            return value as AnyObject?
+        case .setter(let name, let expression):
+            if let value = try visit(expression) {
+                environment.set(name, value)
+                return nil
+            } else {
+                throw Error.undefinedExpression(expression.location)
+            }
+        case .string(let value):
+            return value as AnyObject?
+        case .unary(_, _):
+            return nil
         }
     }
+}
+
+extension Interpreter: StatementVisitor {
     
-    public func visit(_ statement: Statement) {
+    public func visit(_ statement: Statement) throws {
         switch statement.symbol {
         case .declaration(let declaration):
             switch declaration {
             case .function(let name, let args, let body):
                 print("function:", name, args, body)
-            case .variable(let name, let value):
-                print("variable:", name, value)
+            case .variable(let name, let expression):
+                if let value = try visit(expression) {
+                    do {
+                        try environment.define(name, value)
+                    } catch _ {
+                        throw Error.redefinedVariable(name, statement.location)
+                    }
+                } else {
+                    throw Error.undefinedExpression(statement.location)
+                }
             }
         case .expression(let expression):
-            print("expression:", expression)
+            let _ = try visit(expression)
         case .print(let expression):
             print("print:", expression)
         }
     }
 }
+

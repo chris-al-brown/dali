@@ -3,9 +3,9 @@
 
 % Variables
 var x: true;
-var x: 10;
-var x: "string";
-var y: 1.0;
+var y: 10;
+var z: "string";
+var w: 1.0;
 
 % Functions
 func name(x, y, z) {
@@ -16,13 +16,13 @@ func name(x, y, z) {
 % Primitives
 
 % Boolean
-var bool: true;
-var bool: false;
+var bool1: true;
+var bool2: false;
 
 % Color
-var color: #efefef;
-var color: #000000;
-var color: #0000FF;
+var color1: #efefef;
+var color2: #000000;
+var color3: #0000FF;
 
 % Number
 var x: 1.0;
@@ -93,7 +93,7 @@ random(true, false);
 % Future
 
 % Concatenate
-% var: {x, y, z}
+% name: {x, y, z}
 
 % Slices
 % var[1, 2]    % = (y, z)

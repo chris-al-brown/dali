@@ -28,7 +28,7 @@
 import Foundation
 
 public protocol StatementVisitor {
-    func visit(_ statement: Statement)
+    func visit(_ statement: Statement) throws
 }
 
 public struct Statement {
@@ -49,8 +49,8 @@ public struct Statement {
         self.location = location
     }
     
-    public func accept<Visitor: StatementVisitor>(_ visitor: Visitor) {
-        return visitor.visit(self)
+    public func accept<Visitor: StatementVisitor>(_ visitor: Visitor) throws {
+        return try visitor.visit(self)
     }
     
     public let symbol: Symbol

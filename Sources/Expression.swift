@@ -29,7 +29,7 @@ import Foundation
 
 public protocol ExpressionVisitor {
     associatedtype VisitedValue
-    func visit(_ expression: Expression) -> VisitedValue
+    func visit(_ expression: Expression) throws -> VisitedValue
 }
 
 public struct Expression {
@@ -187,8 +187,8 @@ public struct Expression {
         self.location = location
     }
     
-    public func accept<Visitor: ExpressionVisitor>(_ visitor: Visitor) -> Visitor.VisitedValue {
-        return visitor.visit(self)
+    public func accept<Visitor: ExpressionVisitor>(_ visitor: Visitor) throws -> Visitor.VisitedValue {
+        return try visitor.visit(self)
     }
 
     public let symbol: Symbol

@@ -26,3 +26,44 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
+
+public final class Environment {
+    
+    public enum Error: Swift.Error {
+        case redefinedVariable
+        case undefinedVariable
+    }
+    
+    public init() {
+        self.parent = nil
+        self.values = [:]
+    }
+    
+    public init(_ parent: Environment) {
+        self.parent = parent
+        self.values = [:]
+    }
+    
+    public func define(_ name: Token.Identifier, _ value: AnyObject) throws {
+        if values[name] == nil {
+            set(name, value)
+        } else {
+            throw Error.redefinedVariable
+        }
+    }
+    
+    public func get(_ name: Token.Identifier) throws -> AnyObject {
+        if let value = values[name] {
+            return value
+        } else {
+            throw Error.undefinedVariable
+        }
+    }
+    
+    public func set(_ name: Token.Identifier, _ value: AnyObject) {
+        values[name] = value
+    }
+    
+    private let parent: Environment?
+    private var values: [Token.Identifier: AnyObject]
+}
