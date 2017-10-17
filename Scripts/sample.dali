@@ -8,7 +8,7 @@ var z: "string";
 var w: 1.0;
 
 % Functions
-func name: (x, y, z) { x + y + z }
+func name: (x, y, z) { x + y + z; }
 
 % Primitives
 
@@ -30,7 +30,7 @@ number: -0.4;
 var string: "This is a string";
 
 % Usage
-var call: function(1.0, 2.0)
+var call: function(1.0, 2.0);
 
 % Operators
 

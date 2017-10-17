@@ -29,22 +29,7 @@ import Foundation
 
 public struct Console {
     
-    public enum ANSIColor: String {
-        case black      = "\u{001B}[0;30m"
-        case red        = "\u{001B}[0;31m"
-        case green      = "\u{001B}[0;32m"
-        case yellow     = "\u{001B}[0;33m"
-        case blue       = "\u{001B}[0;34m"
-        case magenta    = "\u{001B}[0;35m"
-        case cyan       = "\u{001B}[0;36m"
-        case white      = "\u{001B}[0;37m"
-        
-        public func apply(_ item: Any) -> String {
-            return "\(rawValue)\(item)\u{001B}[0;0m"
-        }
-    }
-    
-    /// Checks whether Xcode spawned the process (i.e. ANSI color codes not supported)
+    /// Checks whether Xcode spawned the process (i.e. ANSI color codes not supported in Xcode console)
     public enum Process: CustomStringConvertible {
         case terminal
         case xcode
@@ -63,107 +48,16 @@ public struct Console {
                 return "xcode"
             }
         }
-        
-        public var supportsColor: Bool {
-            return self == .terminal
-        }
-    }
-    
-    public struct Formatter: ExpressionVisitor {
-
-        public init(useColor: Bool) {
-            self.useColor = useColor
-        }
-
-        public func visit(_ expression: Expression) -> String {
-            switch expression.symbol {
-            case .binary(let lhs, let op, let rhs):
-                var output = ""
-                output += "("
-                output += visit(lhs)
-                output += " "
-                output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
-                output += " "
-                output += visit(rhs)
-                output += ")"
-                return output
-            case .boolean(let value):
-                return useColor ? ANSIColor.yellow.apply(value.description) : value.description
-            case .call(let lhs, let args):
-                var output = ""
-                output += visit(lhs)
-                output += "("
-                output += args.reduce("") {
-                    let value = visit($1)
-                    return $0 + value + ", "
-                }
-                if !args.isEmpty {
-                    let _ = output.unicodeScalars.removeLast()
-                    let _ = output.unicodeScalars.removeLast()
-                }
-                output += ")"
-                return output
-//            case .closure(let args, let body):
-//                var output = ""
-//                output += useColor ? ANSIColor.green.apply(Token.Lexeme.at.description) : Token.Lexeme.at.description
-//                output += "("
-//                output += args.reduce("") {
-//                    return $0 + (useColor ? ANSIColor.white.apply($1) : $1) + ", "
-//                }
-//                if !args.isEmpty {
-//                    let _ = output.unicodeScalars.removeLast()
-//                    let _ = output.unicodeScalars.removeLast()
-//                }
-//                output += ") {"
-//                output += body.reduce("") {
-//                    return $0 + visit($1) + "\n"
-//                }
-//                output += "}"
-//                return output
-            case .color(let value):
-                let r = (0xFF0000 & value) >> 16
-                let g = (0x00FF00 & value) >> 8
-                let b = (0x0000FF & value)
-                let R = useColor ? ANSIColor.white.apply(r.description) : r.description
-                let G = useColor ? ANSIColor.white.apply(g.description) : g.description
-                let B = useColor ? ANSIColor.white.apply(b.description) : b.description
-                return (useColor ? ANSIColor.green.apply("#") : "#") + "(\(R), \(G), \(B))"
-            case .getter(let value):
-                return useColor ? ANSIColor.cyan.apply(value) : value
-            case .keyword(let value):
-                return useColor ? ANSIColor.yellow.apply(value.rawValue) : value.rawValue
-            case .number(let value):
-                return useColor ? ANSIColor.blue.apply(value.description) : value.description
-            case .setter(let key, let value):
-                var output = ""
-                output += useColor ? ANSIColor.cyan.apply(key) : key
-                output += ":"
-                output += " "
-                output += visit(value)
-                return output
-            case .string(let value):
-                return useColor ? ANSIColor.magenta.apply("\"" + value + "\"") : "\"" + value + "\""
-            case .unary(let op, let rhs):
-                var output = ""
-                output += "("
-                output += useColor ? ANSIColor.green.apply(op.lexeme.description) : op.lexeme.description
-                output += visit(rhs)
-                output += ")"
-                return output
-            }
-        }
-
-        public var useColor: Bool
     }
     
     public init() {
         self.process = Process()
-        self.formatter = Formatter(useColor:process.supportsColor)
+        self.formatter = Formatter()
     }
     
     public func error(_ message: String, terminator: String = "\n") {
-        if formatter.useColor {
-            print(ANSIColor.red.apply(message), separator:"", terminator:terminator)
+        if process == .terminal {
+            print("\u{001B}[0;31m\(message)\u{001B}[0;0m", separator:"", terminator:terminator)
         } else {
             print(message, separator:"", terminator:terminator)
         }
