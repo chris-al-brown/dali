@@ -82,6 +82,7 @@ extension Interpreter: ExpressionVisitor {
     public func visit(_ expression: Expression) throws -> AnyObject? {
         switch expression.symbol {
         case .binary(_, _, _):
+            /// TODO: This will throw an undefined expression error
             return nil
         case .boolean(let value):
             return value as AnyObject?
@@ -109,6 +110,7 @@ extension Interpreter: ExpressionVisitor {
         case .string(let value):
             return value as AnyObject?
         case .unary(_, _):
+            /// TODO: This will throw an undefined expression error
             return nil
         }
     }

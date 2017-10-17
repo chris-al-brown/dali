@@ -1,0 +1,49 @@
+% Sketching out some ideas
+
+% Types
+% -----
+% Boolean
+% Color
+% Number
+% String
+
+% Procedures
+% ----------
+% <Boolean>
+% <Color>
+% <Number>
+% <String>
+% <Mixed>
+
+% Procedure methods
+
+% Procedure access 
+color[0]
+color[1]
+color[2]
+
+color[red]
+color[green]
+color[blue]
+
+boolean()
+color()
+number()
+string()
+
+var x: 10;
+func y: () {}
+
+var variable: 10.0
+func function: (x, y, z) {}
+
+% Classes
+% class classy: (object) {}
+
+% Enums
+% enum enumeration: {one, two, three}
+% enumeration
+% enumeration[0] -> {one}
+% enumeration[1] -> {two}
+% enumeration[2] -> {three}
+% enumeration[0, 1] -> {one, two}

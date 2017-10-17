@@ -8,32 +8,29 @@ var z: "string";
 var w: 1.0;
 
 % Functions
-func name(x, y, z) {
-    s: x + y + z;
-    x / s + y / s * s + z / s * s * s;
-}
+func name: (x, y, z) { x + y + z }
 
 % Primitives
 
 % Boolean
-var bool1: true;
-var bool2: false;
+var bool: true;
+bool: false;
 
 % Color
-var color1: #efefef;
-var color2: #000000;
-var color3: #0000FF;
+var color: #efefef;
+color: #000000;
+color: #0000FF;
 
 % Number
-var x: 1.0;
-var x: 0;
-var x: -0.4;
+var number: 1.0;
+number: 0;
+number: -0.4;
 
 % String
-var str: "This is a string";
+var string: "This is a string";
 
 % Usage
-% var call: function(1.0, 2.0)
+var call: function(1.0, 2.0)
 
 % Operators
 
@@ -79,7 +76,7 @@ value: ((true & true) | false);
 mix(true, false, range(0, 1, 1 / 1000));
 
 % Print
-print(var);
+print(name);
 print(true);
 print(1.0);
 
@@ -91,6 +88,12 @@ random(#EFEFEF, #FFFFFF, #C0C0C0);
 random(true, false);
 
 % Future
+
+% Control Flow
+z: switch(condition, x, y);
+
+% Anonymous Functions
+% @(x, y, z) { x + y + z }
 
 % Concatenate
 % name: {x, y, z}

@@ -199,6 +199,7 @@ public final class Parser {
         switch current.lexeme {
         case .identifier(let name):
             let _ = try consume(.identifier(name))
+            let _ = try consume(.colon)
             let _ = try consume(.parenLeft)
             var args: [Token.Identifier] = []
             while !check(.parenRight) {
