@@ -27,4 +27,34 @@
 
 import Foundation
 
+public enum Procedure {
+    
+    public enum Boolean {
+        case constant(Bool)
+        case function(() -> Bool)
+    }
+    
+    case boolean(Boolean)
+}
 
+
+extension Procedure.Boolean {
+    
+    static prefix func !(left: Procedure.Boolean) -> Procedure.Boolean {
+        switch left {
+        case .constant(let value):
+            return .constant(!value)
+        case .function(let evaluate):
+            return .function { !evaluate() }
+        }
+    }
+    
+    public func next() -> Bool {
+        switch self {
+        case .constant(let value):
+            return value
+        case .function(let evaluate):
+            return evaluate()
+        }
+    }
+}

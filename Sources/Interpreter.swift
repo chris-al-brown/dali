@@ -79,13 +79,13 @@ public final class Interpreter {
 
 extension Interpreter: ExpressionVisitor {
     
-    public func visit(_ expression: Expression) throws -> AnyObject? {
+    public func visit(_ expression: Expression) throws -> Procedure {
         switch expression.symbol {
         case .binary(_, _, _):
             /// TODO: This will throw an undefined expression error
             return nil
         case .boolean(let value):
-            return value as AnyObject?
+            return .boolean(.constant(value))
         case .call(_, _):
             return nil
         case .color(let value):
@@ -101,17 +101,18 @@ extension Interpreter: ExpressionVisitor {
         case .number(let value):
             return value as AnyObject?
         case .setter(let name, let expression):
-            if let value = try visit(expression) {
-                environment.set(name, value)
-                return nil
-            } else {
-                throw Error.undefinedExpression(expression.location)
-            }
+            environment.set(name, try visit(expression))
+            /// What should be the return value here?
+            /// Should this actually be a statement and not an expression?
         case .string(let value):
             return value as AnyObject?
-        case .unary(_, _):
-            /// TODO: This will throw an undefined expression error
-            return nil
+        case .unary(let op, let rhs):
+            switch (op, try visit(rhs)) {
+            case (.not, .boolean(let value)):
+                return .boolean(!value)
+            default:
+                throw Error.undefinedExpression(expression.location)
+            }
         }
     }
 }
@@ -125,14 +126,11 @@ extension Interpreter: StatementVisitor {
             case .function(let name, let args, let body):
                 print("function:", name, args, body)
             case .variable(let name, let expression):
-                if let value = try visit(expression) {
-                    do {
-                        try environment.define(name, value)
-                    } catch _ {
-                        throw Error.redefinedVariable(name, statement.location)
-                    }
-                } else {
-                    throw Error.undefinedExpression(statement.location)
+                let value = try visit(expression)
+                do {
+                    try environment.define(name, value)
+                } catch _ {
+                    throw Error.redefinedVariable(name, statement.location)
                 }
             }
         case .expression(let expression):

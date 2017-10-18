@@ -37,6 +37,14 @@ func y: () {}
 var variable: 10.0
 func function: (x, y, z) {}
 
+var color: #efefef
+
+step(color)
+period(color)
+count(color)
+next(color)
+
+
 % Classes
 % class classy: (object) {}
 

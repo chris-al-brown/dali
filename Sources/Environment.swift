@@ -44,7 +44,7 @@ public final class Environment {
         self.values = [:]
     }
     
-    public func define(_ name: Token.Identifier, _ value: AnyObject) throws {
+    public func define(_ name: Token.Identifier, _ value: Procedure) throws {
         if values[name] == nil {
             set(name, value)
         } else {
@@ -52,7 +52,7 @@ public final class Environment {
         }
     }
     
-    public func get(_ name: Token.Identifier) throws -> AnyObject {
+    public func get(_ name: Token.Identifier) throws -> Procedure {
         if let value = values[name] {
             return value
         } else {
@@ -60,10 +60,10 @@ public final class Environment {
         }
     }
     
-    public func set(_ name: Token.Identifier, _ value: AnyObject) {
+    public func set(_ name: Token.Identifier, _ value: Procedure) {
         values[name] = value
     }
     
     private let parent: Environment?
-    private var values: [Token.Identifier: AnyObject]
+    private var values: [Token.Identifier: Procedure]
 }
