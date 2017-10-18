@@ -34,14 +34,11 @@ public struct Token {
     public enum Keyword: String {
         case `func` = "func"
         case `var`  = "var"
-        case print  = "print"
         
         public static func lexeme(for string: String) -> Lexeme? {
             switch string {
             case "func":
                 return .keyword(.func)
-            case "print":
-                return .keyword(.print)
             case "var":
                 return .keyword(.var)
             case "true":

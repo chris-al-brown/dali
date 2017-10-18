@@ -27,10 +27,13 @@
 
 import Foundation
 
-public struct Formatter: ExpressionVisitor {
+public struct Formatter {
     
     public init() {}
-    
+}
+
+extension Formatter: ExpressionVisitor {
+
     public func visit(_ expression: Expression) -> String {
         switch expression.symbol {
         case .binary(let lhs, let op, let rhs):
@@ -92,3 +95,12 @@ public struct Formatter: ExpressionVisitor {
         }
     }
 }
+
+extension Formatter: StatementVisitor {
+
+    public func visit(_ statement: Statement) -> String {
+        
+    }
+}
+
+

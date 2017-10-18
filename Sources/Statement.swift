@@ -28,7 +28,8 @@
 import Foundation
 
 public protocol StatementVisitor {
-    func visit(_ statement: Statement) throws
+    associatedtype StatementValue
+    func visit(_ statement: Statement) throws -> StatementValue
 }
 
 public struct Statement {
@@ -41,7 +42,6 @@ public struct Statement {
     public enum Symbol {
         case declaration(Declaration)
         case expression(Expression)
-        case print(Expression)
     }
     
     public init(_ symbol: Symbol, _ location: Source.Location) {
@@ -49,7 +49,7 @@ public struct Statement {
         self.location = location
     }
     
-    public func accept<Visitor: StatementVisitor>(_ visitor: Visitor) throws {
+    public func accept<Visitor: StatementVisitor>(_ visitor: Visitor) throws -> Visitor.StatementValue {
         return try visitor.visit(self)
     }
     

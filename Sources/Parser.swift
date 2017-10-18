@@ -185,8 +185,6 @@ public final class Parser {
                 return try parseFuncDeclaration()
             case .var:
                 return try parseVarDeclaration()
-            case .print:
-                return try parsePrintStatement()
             }
         default:
             return try parseStatement()
@@ -245,22 +243,8 @@ public final class Parser {
         }
     }
     
-    private func parsePrintStatement() throws -> Statement {
-        let start = current
-        let _ = try consume(.keyword(.print))
-        let _ = try consume(.parenLeft)
-        let expression = try parseExpression()
-        let _ = try consume(.parenRight)
-        let _ = try consume(.semicolon)
-        return Statement(.print(expression), location(from:start))
-    }
-
     private func parseStatement() throws -> Statement {
-        if current.lexeme == .keyword(.print) {
-            return try parsePrintStatement()
-        } else {
-            return try parseExpressionStatement()
-        }
+        return try parseExpressionStatement()
     }
 
     private func parseExpressionStatement() throws -> Statement {

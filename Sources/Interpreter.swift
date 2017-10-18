@@ -67,11 +67,11 @@ public final class Interpreter {
     }
     
     public func interpret(_ statements: [Statement]) throws {
-        try statements.forEach { try visit($0) }
+        try statements.forEach { let _ = try visit($0) }
     }
     
     public func interpret(_ statement: Statement) throws {
-        try visit(statement)
+        let _ = try visit(statement)
     }
 
     private let environment: Environment
@@ -80,51 +80,53 @@ public final class Interpreter {
 extension Interpreter: ExpressionVisitor {
     
     public func visit(_ expression: Expression) throws -> Procedure {
-        switch expression.symbol {
-        case .binary(_, _, _):
-            /// TODO: This will throw an undefined expression error
-            return nil
-        case .boolean(let value):
-            return .boolean(.constant(value))
-        case .call(_, _):
-            return nil
-        case .color(let value):
-            return value as AnyObject?
-        case .getter(let name):
-            do {
-                return try environment.get(name)
-            } catch _ {
-                throw Error.undefinedVariable(name, expression.location)
-            }
-        case .keyword(let name):
-            throw Error.keywordUsage(name, expression.location)
-        case .number(let value):
-            return value as AnyObject?
-        case .setter(let name, let expression):
-            environment.set(name, try visit(expression))
-            /// What should be the return value here?
-            /// Should this actually be a statement and not an expression?
-        case .string(let value):
-            return value as AnyObject?
-        case .unary(let op, let rhs):
-            switch (op, try visit(rhs)) {
-            case (.not, .boolean(let value)):
-                return .boolean(!value)
-            default:
-                throw Error.undefinedExpression(expression.location)
-            }
-        }
+        return .boolean(.constant(true))
+        
+//        switch expression.symbol {
+//        case .binary(_, _, _):
+//            return nil
+//        case .boolean(let value):
+//            return .boolean(.constant(value))
+//        case .call(_, _):
+//            return nil
+//        case .color(let value):
+//            return value as AnyObject?
+//        case .getter(let name):
+//            do {
+//                return try environment.get(name)
+//            } catch _ {
+//                throw Error.undefinedVariable(name, expression.location)
+//            }
+//        case .keyword(let name):
+//            throw Error.keywordUsage(name, expression.location)
+//        case .number(let value):
+//            return value as AnyObject?
+//        case .setter(let name, let expression):
+//            environment.set(name, try visit(expression))
+//            /// What should be the return value here?
+//            /// Should this actually be a statement and not an expression?
+//        case .string(let value):
+//            return value as AnyObject?
+//        case .unary(let op, let rhs):
+//            switch (op, try visit(rhs)) {
+//            case (.not, .boolean(let value)):
+//                return .boolean(!value)
+//            default:
+//                throw Error.undefinedExpression(expression.location)
+//            }
+//        }
+        
     }
 }
 
 extension Interpreter: StatementVisitor {
-    
+
     public func visit(_ statement: Statement) throws {
         switch statement.symbol {
         case .declaration(let declaration):
             switch declaration {
             case .function(let name, let args, let body):
-                print("function:", name, args, body)
+                break
             case .variable(let name, let expression):
                 let value = try visit(expression)
                 do {
@@ -135,8 +137,6 @@ extension Interpreter: StatementVisitor {
             }
         case .expression(let expression):
             let _ = try visit(expression)
-        case .print(let expression):
-            print("print:", expression)
         }
     }
 }
