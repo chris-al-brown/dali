@@ -30,14 +30,14 @@ import Foundation
 public final class Interpreter {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case keywordUsage(Token.Keyword, Source.Location)
+        case invalidKeywordUsage(Token.Keyword, Source.Location)
         case redefinedVariable(Token.Identifier, Source.Location)
         case undefinedVariable(Token.Identifier, Source.Location)
         case undefinedExpression(Source.Location)
         
         public var description: String {
             switch self {
-            case .keywordUsage(let keyword, _):
+            case .invalidKeywordUsage(let keyword, _):
                 return "RuntimeError: Reserved keyword '\(keyword)' cannot be used in an expression."
             case .redefinedVariable(let name, _):
                 return "RuntimeError: Variable '\(name)' has already been defined in this scope."
@@ -50,7 +50,7 @@ public final class Interpreter {
 
         public var location: Source.Location {
             switch self {
-            case .keywordUsage(_, let location):
+            case .invalidKeywordUsage(_, let location):
                 return location
             case .redefinedVariable(_, let location):
                 return location
@@ -64,79 +64,146 @@ public final class Interpreter {
     
     public init() {
         self.environment = Environment()
+        self.globals = Environment.globals
     }
     
-    public func interpret(_ statements: [Statement]) throws {
-        try statements.forEach { let _ = try visit($0) }
+    public func interpret(_ statements: [Statement]) throws -> [Object?] {
+        return try statements.map { try interpret($0) }
     }
     
-    public func interpret(_ statement: Statement) throws {
-        let _ = try visit(statement)
+    public func interpret(_ statement: Statement) throws -> Object? {
+        return try visit(statement)
     }
 
     private let environment: Environment
+    private let globals: Environment
 }
 
 extension Interpreter: ExpressionVisitor {
     
-    public func visit(_ expression: Expression) throws -> Procedure {
-        return .boolean(.constant(true))
-        
-//        switch expression.symbol {
-//        case .binary(_, _, _):
-//            return nil
-//        case .boolean(let value):
-//            return .boolean(.constant(value))
-//        case .call(_, _):
-//            return nil
-//        case .color(let value):
-//            return value as AnyObject?
-//        case .getter(let name):
-//            do {
-//                return try environment.get(name)
-//            } catch _ {
-//                throw Error.undefinedVariable(name, expression.location)
-//            }
-//        case .keyword(let name):
-//            throw Error.keywordUsage(name, expression.location)
-//        case .number(let value):
-//            return value as AnyObject?
-//        case .setter(let name, let expression):
-//            environment.set(name, try visit(expression))
-//            /// What should be the return value here?
-//            /// Should this actually be a statement and not an expression?
-//        case .string(let value):
-//            return value as AnyObject?
-//        case .unary(let op, let rhs):
-//            switch (op, try visit(rhs)) {
-//            case (.not, .boolean(let value)):
-//                return .boolean(!value)
-//            default:
-//                throw Error.undefinedExpression(expression.location)
-//            }
-//        }
-        
+    public func visit(_ expression: Expression) throws -> Object? {
+        switch expression.symbol {
+        case .binary(let lhs, let op, let rhs):
+            guard let lvalue = try visit(lhs) else {
+                throw Error.undefinedExpression(lhs.location)
+            }
+            guard let rvalue = try visit(rhs) else {
+                throw Error.undefinedExpression(rhs.location)
+            }
+            switch op {
+            case .add:
+                guard let object = (lvalue + rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .and:
+                guard let object = (lvalue && rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .divide:
+                guard let object = (lvalue / rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .equalTo:
+                guard let object = (lvalue == rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .greaterThan:
+                guard let object = (lvalue > rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .lessThan:
+                guard let object = (lvalue < rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .multiply:
+                guard let object = (lvalue * rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .or:
+                guard let object = (lvalue || rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .subtract:
+                guard let object = (lvalue - rvalue) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            }
+        case .boolean(let value):
+            return .boolean(value)
+        case .call(_, _):
+            return .boolean(false)
+        case .color(let value):
+            return .color(value)
+        case .getter(let name):
+            guard let value = environment.get(name) else {
+                throw Error.undefinedVariable(name, expression.location)
+            }
+            return value
+        case .keyword(let name):
+            throw Error.invalidKeywordUsage(name, expression.location)
+        case .number(let value):
+            return .number(value)
+        case .setter(let name, let expression):
+            guard let value = try visit(expression) else {
+                throw Error.undefinedExpression(expression.location)
+            }
+            environment.set(name, value)
+            return nil
+        case .string(let value):
+            return .string(value)
+        case .unary(let op, let rhs):
+            guard let value = try visit(rhs) else {
+                throw Error.undefinedExpression(rhs.location)
+            }
+            switch op {
+            case .not:
+                guard let object = !value else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .negative:
+                guard let object = -value else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            case .positive:
+                guard let object = +value else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                return object
+            }
+        }
     }
 }
 
 extension Interpreter: StatementVisitor {
 
-    public func visit(_ statement: Statement) throws {
+    public func visit(_ statement: Statement) throws -> Object? {
         switch statement.symbol {
         case .declaration(let declaration):
             switch declaration {
-            case .function(let name, let args, let body):
+            case .function(_, _, _):
                 break
             case .variable(let name, let expression):
-                let value = try visit(expression)
-                do {
-                    try environment.define(name, value)
-                } catch _ {
+                guard let value = try visit(expression) else {
+                    throw Error.undefinedExpression(expression.location)
+                }
+                if !environment.define(name, value) {
                     throw Error.redefinedVariable(name, statement.location)
                 }
             }
+            return nil
         case .expression(let expression):
-            let _ = try visit(expression)
+            return try visit(expression)
         }
     }
 }

@@ -29,9 +29,10 @@ import Foundation
 
 public final class Environment {
     
-    public enum Error: Swift.Error {
-        case redefinedVariable
-        case undefinedVariable
+    public static var globals: Environment {
+        let env = Environment()
+        let _ = env.define("name", .boolean(true))
+        return env
     }
     
     public init() {
@@ -44,26 +45,22 @@ public final class Environment {
         self.values = [:]
     }
     
-    public func define(_ name: Token.Identifier, _ value: Procedure) throws {
+    public func define(_ name: Token.Identifier, _ value: Object) -> Bool {
         if values[name] == nil {
             set(name, value)
-        } else {
-            throw Error.redefinedVariable
+            return true
         }
+        return false
     }
     
-    public func get(_ name: Token.Identifier) throws -> Procedure {
-        if let value = values[name] {
-            return value
-        } else {
-            throw Error.undefinedVariable
-        }
+    public func get(_ name: Token.Identifier) -> Object? {
+        return values[name]
     }
     
-    public func set(_ name: Token.Identifier, _ value: Procedure) {
+    public func set(_ name: Token.Identifier, _ value: Object) {
         values[name] = value
     }
     
     private let parent: Environment?
-    private var values: [Token.Identifier: Procedure]
+    private var values: [Token.Identifier: Object]
 }

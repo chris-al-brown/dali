@@ -94,7 +94,15 @@ public struct Console {
     public func log(_ expression: Expression) {
         print(formatter.visit(expression))
     }
-    
+
+    public func log(_ object: Object) {
+        print(object.description)
+    }
+
+    public func log(_ statement: Statement) {
+        print(formatter.visit(statement))
+    }
+
     public func prompt(isContinuation: Bool = false) {
         if isContinuation {
             print("...", separator:"", terminator:" ")

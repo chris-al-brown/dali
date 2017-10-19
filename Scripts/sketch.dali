@@ -1,19 +1,10 @@
 % Sketching out some ideas
 
-% Types
-% -----
-% Boolean
-% Color
-% Number
-% String
+% Ideas
 
-% Procedures
-% ----------
-% <Boolean>
-% <Color>
-% <Number>
-% <String>
-% <Mixed>
+var name: 10;
+fun junk: (x, y, z) {...}
+seq some: [...]
 
 % Procedure methods
 

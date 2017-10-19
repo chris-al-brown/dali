@@ -27,10 +27,7 @@
 
 import Foundation
 
-public struct Formatter {
-    
-    public init() {}
-}
+public struct Formatter {}
 
 extension Formatter: ExpressionVisitor {
 
@@ -99,7 +96,34 @@ extension Formatter: ExpressionVisitor {
 extension Formatter: StatementVisitor {
 
     public func visit(_ statement: Statement) -> String {
-        
+        switch statement.symbol {
+        case .declaration(let declaration):
+            switch declaration {
+            case .function(let name, let args, let statement):
+                var output = "func \(name): ("
+                output += args.reduce("") {
+                    return $0 + $1 + ", "
+                }
+                if !args.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
+                output += ") {\n"
+                output += statement.reduce("") {
+                    return $0 + visit($1) + ";\n"
+                }
+                if !args.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
+                output += "}"
+                return output
+            case .variable(let name, let value):
+                return "var \(name): \(visit(value));"
+            }
+        case .expression(let expression):
+            return visit(expression)
+        }
     }
 }
 

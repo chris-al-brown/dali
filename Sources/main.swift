@@ -62,7 +62,12 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            try interpreter.interpret(try parser.parse())
+            let procedures = try interpreter.interpret(try parser.parse())
+            procedures.forEach {
+                if let procedure = $0 {
+                    console.log(procedure)
+                }
+            }
             return .success
         } catch let issue as Interpreter.Error {
             console.error(issue, in:source)
