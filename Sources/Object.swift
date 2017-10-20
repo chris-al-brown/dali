@@ -146,6 +146,13 @@ public enum Object {
             return nil
         }
     }
+    
+    public func call(_ interpreter: Interpreter, _ arguments: [Object]) -> Object? {
+        
+        /// TODO: Create a function object that can be evaluated
+        return nil
+        
+    }
 }
 
 extension Object: CustomStringConvertible {

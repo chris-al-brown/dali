@@ -32,6 +32,7 @@ public final class Interpreter {
     public enum Error: Swift.Error, CustomStringConvertible {
         case invalidKeywordUsage(Token.Keyword, Source.Location)
         case redefinedVariable(Token.Identifier, Source.Location)
+        case objectIsNotCallable(Source.Location)
         case undefinedVariable(Token.Identifier, Source.Location)
         case undefinedExpression(Source.Location)
         
@@ -41,6 +42,8 @@ public final class Interpreter {
                 return "RuntimeError: Reserved keyword '\(keyword)' cannot be used in an expression."
             case .redefinedVariable(let name, _):
                 return "RuntimeError: Variable '\(name)' has already been defined in this scope."
+            case .objectIsNotCallable(_):
+                return "RuntimeError: Object is not a callable function."
             case .undefinedVariable(let name, _):
                 return "RuntimeError: Variable '\(name)' is undefined in this scope."
             case .undefinedExpression(_):
@@ -53,6 +56,8 @@ public final class Interpreter {
             case .invalidKeywordUsage(_, let location):
                 return location
             case .redefinedVariable(_, let location):
+                return location
+            case .objectIsNotCallable(let location):
                 return location
             case .undefinedVariable(_, let location):
                 return location
@@ -139,8 +144,22 @@ extension Interpreter: ExpressionVisitor {
             }
         case .boolean(let value):
             return .boolean(value)
-        case .call(_, _):
-            return .boolean(false)
+        case .call(let callee, let arguments):
+            guard let object = try visit(callee) else {
+                throw Error.undefinedExpression(expression.location)
+            }
+            var values: [Object] = []
+            values.reserveCapacity(arguments.count)
+            for argument in arguments {
+                guard let value = try visit(argument) else {
+                    throw Error.undefinedExpression(argument.location)
+                }
+                values.append(value)
+            }
+            guard let output = object.call(self, values) else {
+                throw Error.objectIsNotCallable(callee.location)
+            }
+            return output
         case .color(let value):
             return .color(value)
         case .getter(let name):
@@ -192,7 +211,10 @@ extension Interpreter: StatementVisitor {
         case .declaration(let declaration):
             switch declaration {
             case .function(_, _, _):
-                break
+            
+                /// TODO: Create a function object here and define it in the scope
+                return nil
+                
             case .variable(let name, let expression):
                 guard let value = try visit(expression) else {
                     throw Error.undefinedExpression(expression.location)
