@@ -82,11 +82,11 @@ public final class Dali {
         return .failure
     }
     
-    public func error(_ message: String) {
+    public func error(_ message: String, separator: String = "", terminator: String = "\n") {
         if iterm {
-            print("\u{001B}[0;31m\(message)\u{001B}[0;0m", separator:"", terminator:"\n")
+            print("\u{001B}[0;31m\(message)\u{001B}[0;0m", separator:separator, terminator:terminator)
         } else {
-            print(message, separator:"", terminator:"\n")
+            print(message, separator:separator, terminator:terminator)
         }
     }
     
