@@ -195,4 +195,67 @@ public struct Expression {
     public let location: Source.Location
 }
 
+extension Expression: CustomStringConvertible {
+    
+    public var description: String {
+        switch symbol {
+        case .binary(let lhs, let op, let rhs):
+            var output = ""
+            output += "("
+            output += lhs.description
+            output += " "
+            output += op.lexeme.description
+            output += " "
+            output += rhs.description
+            output += ")"
+            return output
+        case .boolean(let value):
+            return value.description
+        case .call(let lhs, let args):
+            var output = ""
+            output += lhs.description
+            output += "("
+            output += args.reduce("") {
+                let value = $1.description
+                return $0 + value + ", "
+            }
+            if !args.isEmpty {
+                let _ = output.unicodeScalars.removeLast()
+                let _ = output.unicodeScalars.removeLast()
+            }
+            output += ")"
+            return output
+        case .color(let value):
+            let r = (0xFF0000 & value) >> 16
+            let g = (0x00FF00 & value) >> 8
+            let b = (0x0000FF & value)
+            let R = r.description
+            let G = g.description
+            let B = b.description
+            return "#(\(R), \(G), \(B))"
+        case .getter(let value):
+            return value
+        case .keyword(let value):
+            return value.rawValue
+        case .number(let value):
+            return value.description
+        case .setter(let key, let value):
+            var output = ""
+            output += key
+            output += ":"
+            output += " "
+            output += value.description
+            return output
+        case .string(let value):
+            return "\"" + value + "\""
+        case .unary(let op, let rhs):
+            var output = ""
+            output += "("
+            output += op.lexeme.description
+            output += rhs.description
+            output += ")"
+            return output
+        }
+    }
+}
 

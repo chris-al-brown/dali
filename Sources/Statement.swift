@@ -56,3 +56,37 @@ public struct Statement {
     public let symbol: Symbol
     public let location: Source.Location
 }
+
+extension Statement: CustomStringConvertible {
+    
+    public var description: String {
+        switch symbol {
+        case .declaration(let declaration):
+            switch declaration {
+            case .function(let name, let args, let statement):
+                var output = "func \(name): ("
+                output += args.reduce("") {
+                    return $0 + $1 + ", "
+                }
+                if !args.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
+                output += ") {\n"
+                output += statement.reduce("") {
+                    return $0 + $1.description + ";\n"
+                }
+                if !args.isEmpty {
+                    let _ = output.unicodeScalars.removeLast()
+                    let _ = output.unicodeScalars.removeLast()
+                }
+                output += "}"
+                return output
+            case .variable(let name, let value):
+                return "var \(name): \(value.description);"
+            }
+        case .expression(let expression):
+            return expression.description
+        }
+    }
+}

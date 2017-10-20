@@ -31,8 +31,8 @@ public final class Dali {
     
     public enum Mode {
         case file(String)
+        case help
         case repl
-        case usage
     }
     
     public enum Status {
@@ -41,20 +41,21 @@ public final class Dali {
     }
     
     public init(_ args: [String]) {
-        self.console = Console()
         self.interpreter = Interpreter()
+        let environment = ProcessInfo.processInfo.environment
+        self.iterm = environment["XPC_SERVICE_NAME"]?.range(of:"Xcode") == nil
         switch args.count {
         case 1:
             self.mode = .repl
         case 2:
             switch args[1] {
             case "-h", "--help":
-                self.mode = .usage
+                self.mode = .help
             default:
                 self.mode = .file(args[1])
             }
         default:
-            self.mode = .usage
+            self.mode = .help
         }
     }
     
@@ -62,23 +63,55 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            let procedures = try interpreter.interpret(try parser.parse())
-            procedures.forEach {
-                if let procedure = $0 {
-                    console.log(procedure)
+            let objects = try interpreter.interpret(try parser.parse())
+            objects.forEach {
+                if let object = $0 {
+                    log(object)
                 }
             }
             return .success
         } catch let issue as Interpreter.Error {
-            console.error(issue, in:source)
+            error(issue, in:source)
         } catch let issue as Scanner.Error {
-            console.error(issue, in:source)
+            error(issue, in:source)
         } catch let issue as Parser.Error {
-            console.error(issue, in:source)
+            error(issue, in:source)
         } catch {
             fatalError("Unexpected error: \(error)")
         }
         return .failure
+    }
+    
+    public func error(_ message: String) {
+        if iterm {
+            print("\u{001B}[0;31m\(message)\u{001B}[0;0m", separator:"", terminator:"\n")
+        } else {
+            print(message, separator:"", terminator:"\n")
+        }
+    }
+    
+    private func error(_ message: String, in source: Source, at location: Source.Location) {
+        let row = source.line(for:location)
+        let col = source.columns(for:location)
+        var output = ""
+        output += "file: \(source.input), line: \(row), "
+        output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
+        output += source.extractLine(location) + "\n"
+        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
+        output += message
+        error(output)
+    }
+    
+    public func error(_ issue: Interpreter.Error, in source: Source) {
+        error(issue.description, in:source, at:issue.location)
+    }
+    
+    public func error(_ issue: Parser.Error, in source: Source) {
+        error(issue.description, in:source, at:issue.location)
+    }
+    
+    public func error(_ issue: Scanner.Error, in source: Source) {
+        error(issue.description, in:source, at:issue.location)
     }
     
     public func exit(with status: Status) -> Never {
@@ -90,6 +123,30 @@ public final class Dali {
         }
     }
     
+    public func log(_ message: String, terminator: String = "\n") {
+        print(message, separator:"", terminator:terminator)
+    }
+    
+    public func log(_ expression: Expression) {
+        print(expression.description)
+    }
+    
+    public func log(_ object: Object) {
+        print(object.description)
+    }
+    
+    public func log(_ statement: Statement) {
+        print(statement.description)
+    }
+    
+    public func prompt(isContinuation: Bool = false) {
+        if isContinuation {
+            print("...", separator:"", terminator:" ")
+        } else {
+            print(">>>", separator:"", terminator:" ")
+        }
+    }
+
     public func run() -> Never {
         switch mode {
         case .file(let name):
@@ -98,22 +155,22 @@ public final class Dali {
                 let result = compile(source)
                 exit(with:result)
             } catch let issue {
-                console.error("ScriptError: \(issue.localizedDescription)")
+                error("ScriptError: \(issue.localizedDescription)")
                 exit(with:.failure)
             }
         case .repl:
-            console.log("-------------------------------------")
-            console.log(" dali REPL v0.1.0 (press ^C to exit) ")
-            console.log("-------------------------------------")
+            log("-------------------------------------")
+            log(" dali REPL v1.0.0 (press ^C to exit) ")
+            log("-------------------------------------")
             var buffer = ""
             while true {
-                console.prompt()
+                prompt()
                 while true {
                     guard let line = readLine(strippingNewline:false) else { break }
                     buffer += line
                     let source = Source(buffer, input:"<stdin>")
                     if source.needsContinuation {
-                        console.prompt(isContinuation:true)
+                        prompt(isContinuation:true)
                     } else {
                         let _ = compile(source)
                         buffer.removeAll(keepingCapacity:true)
@@ -121,19 +178,19 @@ public final class Dali {
                     }
                 }
             }
-        case .usage:
+        case .help:
             var output = ""
             output += "Usage:\n"
             output += "    dali \n"
             output += "    dali <script> \n"
             output += "    dali (-h | --help)"
-            console.log(output)
+            log(output)
             exit(with:.success)
         }
     }
     
-    private let console: Console
     private let interpreter: Interpreter
+    private let iterm: Bool
     private let mode: Mode
 }
 
