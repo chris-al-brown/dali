@@ -35,7 +35,6 @@ public final class Parser {
         case invalidFuncDeclaration(SourceLocation)
         case invalidSyntax(Token)
         case invalidVarDeclaration(SourceLocation)
-        case trailingComma(SourceLocation)
         case unexpectedStreamEnd(Token)
         case unexpectedToken(Token, Token.Lexeme)
 
@@ -51,8 +50,6 @@ public final class Parser {
                 return "Unrecognized syntax starting at '\(token.lexeme)'."
             case .invalidVarDeclaration(_):
                 return "Invalid syntax for a variable declaration."
-            case .trailingComma(_):
-                return "Invalid syntax with trailing comma."
             case .unexpectedStreamEnd(let token):
                 return "Expected more characters to complete expression near '\(token.lexeme)'."
             case .unexpectedToken(let token, let expected):
@@ -71,8 +68,6 @@ public final class Parser {
             case .invalidSyntax(let token):
                 return token.location
             case .invalidVarDeclaration(let location):
-                return location
-            case .trailingComma(let location):
                 return location
             case .unexpectedStreamEnd(let token):
                 return token.location
@@ -156,9 +151,6 @@ public final class Parser {
                 arguments.append(try parseExpression())
                 if check(.comma) {
                     let _ = try consume(.comma)
-                    if check(.parenRight) {
-                        throw Error.trailingComma(previous.location)
-                    }
                 }
             }
             let _ = try consume(.parenRight)
@@ -207,9 +199,6 @@ public final class Parser {
                     args.append(value)
                     if check(.comma) {
                         let _ = try consume(.comma)
-                        if check(.parenRight) {
-                            throw Error.trailingComma(previous.location)
-                        }
                     }
                 default:
                     throw Error.invalidArgument(current)
