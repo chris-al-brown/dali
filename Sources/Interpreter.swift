@@ -39,15 +39,15 @@ public final class Interpreter {
         public var description: String {
             switch self {
             case .invalidKeywordUsage(let keyword, _):
-                return "RuntimeError: Reserved keyword '\(keyword)' cannot be used in an expression."
+                return "Reserved keyword '\(keyword)' cannot be used in an expression."
             case .redefinedVariable(let name, _):
-                return "RuntimeError: Variable '\(name)' has already been defined in this scope."
+                return "Variable '\(name)' has already been defined in this scope."
             case .objectIsNotCallable(_):
-                return "RuntimeError: Object is not a callable function."
+                return "Object is not a callable function."
             case .undefinedVariable(let name, _):
-                return "RuntimeError: Variable '\(name)' is undefined in this scope."
+                return "Variable '\(name)' is undefined in this scope."
             case .undefinedExpression(_):
-                return "RuntimeError: Expression is undefined."
+                return "Expression is undefined."
             }
         }
 
@@ -72,11 +72,11 @@ public final class Interpreter {
         self.globals = Environment.globals
     }
     
-    public func interpret(_ statements: [Statement]) throws -> [Object?] {
+    public func interpret(_ statements: [AST.Statement]) throws -> [Object?] {
         return try statements.map { try interpret($0) }
     }
     
-    public func interpret(_ statement: Statement) throws -> Object? {
+    public func interpret(_ statement: AST.Statement) throws -> Object? {
         return try visit(statement)
     }
 
@@ -84,9 +84,9 @@ public final class Interpreter {
     private let globals: Environment
 }
 
-extension Interpreter: ExpressionVisitor {
+extension Interpreter: ASTVisitor {
     
-    public func visit(_ expression: Expression) throws -> Object? {
+    public func visit(_ expression: AST.Expression) throws -> Object? {
         switch expression.symbol {
         case .binary(let lhs, let op, let rhs):
             guard let lvalue = try visit(lhs) else {
@@ -202,16 +202,13 @@ extension Interpreter: ExpressionVisitor {
             }
         }
     }
-}
-
-extension Interpreter: StatementVisitor {
-
-    public func visit(_ statement: Statement) throws -> Object? {
+    
+    public func visit(_ statement: AST.Statement) throws -> Object? {
         switch statement.symbol {
         case .declaration(let declaration):
             switch declaration {
             case .function(_, _, _):
-            
+                
                 /// TODO: Create a function object here and define it in the scope
                 return nil
                 
@@ -229,4 +226,3 @@ extension Interpreter: StatementVisitor {
         }
     }
 }
-

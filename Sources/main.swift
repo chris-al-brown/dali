@@ -26,7 +26,7 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
-g
+
 public typealias Source = String
 
 public typealias SourceIndex = Source.UnicodeScalarIndex
@@ -130,15 +130,15 @@ public final class Dali {
     }
     
     public func error(_ issue: Interpreter.Error, in source: Source) {
-        error(issue.description, in:source, at:issue.location)
+        error("RuntimeError: \(issue.description)", in:source, at:issue.location)
     }
     
     public func error(_ issue: Parser.Error, in source: Source) {
-        error(issue.description, in:source, at:issue.location)
+        error("SyntaxError: \(issue.description)", in:source, at:issue.location)
     }
     
     public func error(_ issue: Scanner.Error, in source: Source) {
-        error(issue.description, in:source, at:issue.location)
+        error("SyntaxError: \(issue.description)", in:source, at:issue.location)
     }
     
     public func exit(with status: Status) -> Never {
@@ -177,7 +177,7 @@ public final class Dali {
         print(message, separator:"", terminator:terminator)
     }
     
-    public func log(_ expression: Expression) {
+    public func log(_ expression: AST.Expression) {
         print(expression.description)
     }
     
@@ -185,7 +185,7 @@ public final class Dali {
         print(object.description)
     }
     
-    public func log(_ statement: Statement) {
+    public func log(_ statement: AST.Statement) {
         print(statement.description)
     }
     

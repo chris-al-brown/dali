@@ -30,7 +30,7 @@ import Foundation
 public struct Token {
     
     public typealias Identifier = String
-
+    
     public enum Keyword: String {
         case `func` = "func"
         case `var`  = "var"

@@ -38,13 +38,13 @@ public final class Scanner {
         public var description: String {
             switch self {
             case .unexpectedCharacter(_, let character):
-                return "SyntaxError: Encountered an unsupported character: '\(character)'"
+                return "Encountered an unsupported character: '\(character)'"
             case .unsupportedColorFormat(_):
-                return "SyntaxError: Colors are only supported in hexadecimal RGB format."
+                return "Colors are only supported in hexadecimal RGB format."
             case .unsupportedNumericFormat(_):
-                return "SyntaxError: Numbers are only supported in simple double and integer formats."
+                return "Numbers are only supported in simple double and integer formats."
             case .unterminatedString(_):
-                return "SyntaxError: Strings require a closing double quote and cannot span multiple lines."
+                return "Strings require a closing double quote and cannot span multiple lines."
             }
         }
 
