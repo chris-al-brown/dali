@@ -30,11 +30,11 @@ import Foundation
 public final class Interpreter {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case invalidKeywordUsage(Token.Keyword, Source.Location)
-        case redefinedVariable(Token.Identifier, Source.Location)
-        case objectIsNotCallable(Source.Location)
-        case undefinedVariable(Token.Identifier, Source.Location)
-        case undefinedExpression(Source.Location)
+        case invalidKeywordUsage(Token.Keyword, SourceLocation)
+        case redefinedVariable(Token.Identifier, SourceLocation)
+        case objectIsNotCallable(SourceLocation)
+        case undefinedVariable(Token.Identifier, SourceLocation)
+        case undefinedExpression(SourceLocation)
         
         public var description: String {
             switch self {
@@ -51,7 +51,7 @@ public final class Interpreter {
             }
         }
 
-        public var location: Source.Location {
+        public var location: SourceLocation {
             switch self {
             case .invalidKeywordUsage(_, let location):
                 return location

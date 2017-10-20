@@ -44,7 +44,7 @@ public struct Statement {
         case expression(Expression)
     }
     
-    public init(_ symbol: Symbol, _ location: Source.Location) {
+    public init(_ symbol: Symbol, _ location: SourceLocation) {
         self.symbol = symbol
         self.location = location
     }
@@ -54,7 +54,7 @@ public struct Statement {
     }
     
     public let symbol: Symbol
-    public let location: Source.Location
+    public let location: SourceLocation
 }
 
 extension Statement: CustomStringConvertible {

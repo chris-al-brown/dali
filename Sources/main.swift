@@ -27,6 +27,14 @@
 
 import Foundation
 
+public typealias Source = String
+
+public typealias SourceIndex = Source.UnicodeScalarIndex
+
+public typealias SourceLocation = Range<SourceIndex>
+
+public typealias SourceScalar = UnicodeScalar
+
 public final class Dali {
     
     public enum Mode {
@@ -57,6 +65,22 @@ public final class Dali {
         default:
             self.mode = .help
         }
+    }
+    
+    public func columns(in source: Source, for location: SourceLocation) -> ClosedRange<Int> {
+        var currentIndex = location.lowerBound
+        /// Fix for eol to be at end of a line
+        if source.unicodeScalars[currentIndex] == "\n" && currentIndex != source.unicodeScalars.startIndex {
+            currentIndex = source.unicodeScalars.index(before:currentIndex)
+        }
+        while source.unicodeScalars[currentIndex] != "\n" && currentIndex != source.unicodeScalars.startIndex {
+            currentIndex = source.unicodeScalars.index(before:currentIndex)
+        }
+        /// Fix for the first line that needs to be shifted by one
+        let offset = currentIndex == source.unicodeScalars.startIndex ? 1 : 0
+        let column = source.unicodeScalars.distance(from:currentIndex, to:location.lowerBound) + offset
+        let length = source.unicodeScalars.distance(from:location.lowerBound, to:location.upperBound)
+        return column...(column + length - 1)
     }
     
     public func compile(_ source: Source) -> Status {
@@ -90,16 +114,19 @@ public final class Dali {
         }
     }
     
-    private func error(_ message: String, in source: Source, at location: Source.Location) {
-        let row = source.line(for:location)
-        let col = source.columns(for:location)
-        var output = ""
-        output += "file: \(source.input), line: \(row), "
-        output += (col.count == 1) ? "column: \(col.lowerBound)\n" : "columns: \(col.lowerBound)-\(col.upperBound)\n"
-        output += source.extractLine(location) + "\n"
-        output += String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count) + "\n"
-        output += message
-        error(output)
+    private func error(_ message: String, in source: Source, at location: SourceLocation) {
+        let row = line(in:source, for:location)
+        let col = columns(in:source, for:location)
+        let cols = (col.count == 1) ? "column: \(col.lowerBound)" : "columns: \(col.lowerBound)-\(col.upperBound)"
+        switch mode {
+        case .file(let filename):
+            error("file: '\(filename)', line: \(row.number), \(cols)")
+        default:
+            error("file: <stdin>, line: \(row.number), \(cols)")
+        }
+        error(row.source)
+        error(String(repeating:" ", count:col.lowerBound - 1) + String(repeating:"^", count:col.count))
+        error(message)
     }
     
     public func error(_ issue: Interpreter.Error, in source: Source) {
@@ -123,6 +150,29 @@ public final class Dali {
         }
     }
     
+    public func line(in source: Source, for location: SourceLocation) -> (source: Source, number: Int) {
+        var line = 1
+        var currentIndex = source.unicodeScalars.startIndex
+        while currentIndex != location.lowerBound && currentIndex != source.unicodeScalars.endIndex {
+            if source.unicodeScalars[currentIndex] == "\n" {
+                line += 1
+            }
+            currentIndex = source.unicodeScalars.index(after:currentIndex)
+        }
+        var sindex = location.lowerBound
+        if source.unicodeScalars[sindex] == "\n" && sindex != source.unicodeScalars.startIndex {
+            sindex = source.unicodeScalars.index(before:sindex)
+        }
+        while source.unicodeScalars[sindex] != "\n" && sindex != source.unicodeScalars.startIndex {
+            sindex = source.unicodeScalars.index(before:sindex)
+        }
+        var eindex = location.upperBound
+        while source.unicodeScalars[eindex] != "\n" && eindex != source.unicodeScalars.endIndex {
+            eindex = source.unicodeScalars.index(after:eindex)
+        }
+        return (source: String(source.unicodeScalars[sindex..<eindex]).trimmingCharacters(in:.newlines), number: line)
+    }
+    
     public func log(_ message: String, terminator: String = "\n") {
         print(message, separator:"", terminator:terminator)
     }
@@ -139,8 +189,36 @@ public final class Dali {
         print(statement.description)
     }
     
-    public func prompt(isContinuation: Bool = false) {
-        if isContinuation {
+    public func premature(_ source: Source) -> Bool {
+        var curly = 0
+        var round = 0
+        var square = 0
+        var semicolon = 0
+        for scalar in source.unicodeScalars {
+            switch scalar {
+            case ";":
+                semicolon += 1
+            case "{":
+                curly += 1
+            case "}":
+                curly -= 1
+            case "(":
+                round += 1
+            case ")":
+                round -= 1
+            case "[":
+                square += 1
+            case "]":
+                square -= 1
+            default:
+                break
+            }
+        }
+        return !(curly == 0 && round == 0 && square == 0) || semicolon == 0
+    }
+    
+    public func prompt(premature: Bool = false) {
+        if premature {
             print("...", separator:"", terminator:" ")
         } else {
             print(">>>", separator:"", terminator:" ")
@@ -151,7 +229,7 @@ public final class Dali {
         switch mode {
         case .file(let name):
             do {
-                let source = Source(try String(contentsOfFile:name, encoding:.utf8), input:"'\(name)'")
+                let source = try String(contentsOfFile:name, encoding:.utf8)
                 let result = compile(source)
                 exit(with:result)
             } catch let issue {
@@ -162,29 +240,26 @@ public final class Dali {
             log("-------------------------------------")
             log(" dali REPL v1.0.0 (press ^C to exit) ")
             log("-------------------------------------")
-            var buffer = ""
+            var source = ""
             while true {
                 prompt()
                 while true {
                     guard let line = readLine(strippingNewline:false) else { break }
-                    buffer += line
-                    let source = Source(buffer, input:"<stdin>")
-                    if source.needsContinuation {
-                        prompt(isContinuation:true)
+                    source += line
+                    if premature(source) {
+                        prompt(premature:true)
                     } else {
                         let _ = compile(source)
-                        buffer.removeAll(keepingCapacity:true)
+                        source.removeAll(keepingCapacity:true)
                         break
                     }
                 }
             }
         case .help:
-            var output = ""
-            output += "Usage:\n"
-            output += "    dali \n"
-            output += "    dali <script> \n"
-            output += "    dali (-h | --help)"
-            log(output)
+            log("Usage:")
+            log("    dali")
+            log("    dali <script>")
+            log("    dali (-h | --help)")
             exit(with:.success)
         }
     }

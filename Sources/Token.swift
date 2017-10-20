@@ -149,13 +149,13 @@ public struct Token {
         }
     }
     
-    public init(_ lexeme: Lexeme, _ location: Source.Location) {
+    public init(_ lexeme: Lexeme, _ location: SourceLocation) {
         self.lexeme = lexeme
         self.location = location
     }
 
     public let lexeme: Lexeme
-    public let location: Source.Location
+    public let location: SourceLocation
 }
 
 extension Token.Lexeme: CustomStringConvertible {

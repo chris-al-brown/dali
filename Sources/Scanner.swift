@@ -30,10 +30,10 @@ import Foundation
 public final class Scanner {
     
     public enum Error: Swift.Error, CustomStringConvertible {
-        case unexpectedCharacter(Source.Location, UnicodeScalar)
-        case unsupportedColorFormat(Source.Location)
-        case unsupportedNumericFormat(Source.Location)
-        case unterminatedString(Source.Location)
+        case unexpectedCharacter(SourceLocation, UnicodeScalar)
+        case unsupportedColorFormat(SourceLocation)
+        case unsupportedNumericFormat(SourceLocation)
+        case unterminatedString(SourceLocation)
 
         public var description: String {
             switch self {
@@ -48,7 +48,7 @@ public final class Scanner {
             }
         }
 
-        public var location: Source.Location {
+        public var location: SourceLocation {
             switch self {
             case .unexpectedCharacter(let location, _):
                 return location
@@ -65,13 +65,13 @@ public final class Scanner {
     public init(_ source: Source) {
         self.source = source
         self.tokens = []
-        self.start = source.startIndex
-        self.current = source.startIndex
+        self.start = source.unicodeScalars.startIndex
+        self.current = source.unicodeScalars.startIndex
     }
     
-    public func advance() -> Source.Scalar {
-        let scalar = source[current]
-        current = source.index(after:current)
+    public func advance() -> SourceScalar {
+        let scalar = source.unicodeScalars[current]
+        current = source.unicodeScalars.index(after:current)
         return scalar
     }
     
@@ -79,15 +79,15 @@ public final class Scanner {
         tokens.append(Token(lexeme, locate()))
     }
 
-    private func isAlpha(_ scalar: Source.Scalar) -> Bool {
+    private func isAlpha(_ scalar: SourceScalar) -> Bool {
         return CharacterSet.letters.contains(scalar) || scalar == "_"
     }
     
-    private func isDigit(_ scalar: Source.Scalar) -> Bool {
+    private func isDigit(_ scalar: SourceScalar) -> Bool {
         return CharacterSet.decimalDigits.contains(scalar)
     }
     
-    private func isHex(_ scalar: Source.Scalar) -> Bool {
+    private func isHex(_ scalar: SourceScalar) -> Bool {
         return (isDigit(scalar) && scalar != ".")
             || scalar == "A" || scalar == "a"
             || scalar == "B" || scalar == "b"
@@ -97,28 +97,28 @@ public final class Scanner {
             || scalar == "F" || scalar == "f"
     }
     
-    private func locate() -> Source.Location {
+    private func locate() -> SourceLocation {
         return start..<current
     }
     
-    private func peek() -> Source.Scalar {
-        if current >= source.endIndex {
-            return Source.Scalar("\0")
+    private func peek() -> SourceScalar {
+        if current >= source.unicodeScalars.endIndex {
+            return SourceScalar("\0")
         }
-        return source[current]
+        return source.unicodeScalars[current]
     }
 
-    private func peekNext() -> Source.Scalar {
-        if source.index(after:current) >= source.endIndex {
-            return Source.Scalar("\0")
+    private func peekNext() -> SourceScalar {
+        if source.unicodeScalars.index(after:current) >= source.unicodeScalars.endIndex {
+            return SourceScalar("\0")
         }
-        return source[source.index(after:current)]
+        return source.unicodeScalars[source.unicodeScalars.index(after:current)]
     }
     
     private func reset() {
         tokens.removeAll(keepingCapacity:true)
-        start = source.startIndex
-        current = source.startIndex
+        start = source.unicodeScalars.startIndex
+        current = source.unicodeScalars.startIndex
     }
     
     public func scan() throws -> [Token] {
@@ -196,8 +196,8 @@ public final class Scanner {
                         throw Error.unsupportedColorFormat(locate())
                     }
                 }
-                let index = source.index(after:start)
-                append(lexeme:.color(source.extract(index..<current)))
+                let index = source.unicodeScalars.index(after:start)
+                append(lexeme:.color(String(source.unicodeScalars[index..<current])))
                 
             /// Literals (string)
             case "\"":
@@ -211,9 +211,9 @@ public final class Scanner {
                     // The closing "
                     let _ = advance()
                     // Trim the surrounding quotes
-                    let lower = source.index(after:start)
-                    let upper = source.index(before:current)
-                    append(lexeme:.string(source.extract(lower..<upper)))
+                    let lower = source.unicodeScalars.index(after:start)
+                    let upper = source.unicodeScalars.index(before:current)
+                    append(lexeme:.string(String(source.unicodeScalars[lower..<upper])))
                 } else {
                     // Unterminated string error
                     throw Error.unterminatedString(locate())
@@ -248,7 +248,7 @@ public final class Scanner {
                     }
                     
                     /// Attempt numeric conversion
-                    if let value = Double(String(source.extract(locate()))) {
+                    if let value = Double(String(source.unicodeScalars[locate()])) {
                         append(lexeme:.number(value))
                     } else {
                         // Failed numeric conversion error
@@ -260,7 +260,7 @@ public final class Scanner {
                     while isAlpha(peek()) || isDigit(peek()) {
                         let _ = advance()
                     }
-                    let value = String(source.extract(locate()))
+                    let value = String(String(source.unicodeScalars[locate()]))
                     if let keyword = Token.Keyword.lexeme(for:value) {
                         append(lexeme:keyword)
                     } else {
@@ -284,8 +284,8 @@ public final class Scanner {
     
     private let source: Source
     private var tokens: [Token]
-    private var start: Source.Index
-    private var current: Source.Index
+    private var start: SourceIndex
+    private var current: SourceIndex
 }
 
 

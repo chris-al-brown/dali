@@ -31,11 +31,11 @@ public final class Parser {
 
     public enum Error: Swift.Error, CustomStringConvertible {
         case invalidArgument(Token)
-        case invalidAssignment(Source.Location)
-        case invalidFuncDeclaration(Source.Location)
+        case invalidAssignment(SourceLocation)
+        case invalidFuncDeclaration(SourceLocation)
         case invalidSyntax(Token)
-        case invalidVarDeclaration(Source.Location)
-        case trailingComma(Source.Location)
+        case invalidVarDeclaration(SourceLocation)
+        case trailingComma(SourceLocation)
         case unexpectedStreamEnd(Token)
         case unexpectedToken(Token, Token.Lexeme)
 
@@ -60,7 +60,7 @@ public final class Parser {
             }
         }
 
-        public var location: Source.Location {
+        public var location: SourceLocation {
             switch self {
             case .invalidArgument(let token):
                 return token.location
@@ -110,11 +110,11 @@ public final class Parser {
         throw Error.unexpectedToken(current, lexeme)
     }
 
-    private func location(from start: Token) -> Source.Location {
+    private func location(from start: Token) -> SourceLocation {
         return location(from:start.location)
     }
 
-    private func location(from start: Source.Location) -> Source.Location {
+    private func location(from start: SourceLocation) -> SourceLocation {
         return start.lowerBound..<previous.location.upperBound
     }
 

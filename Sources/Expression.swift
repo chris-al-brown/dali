@@ -182,7 +182,7 @@ public struct Expression {
         }
     }
     
-    public init(_ symbol: Symbol, _ location: Source.Location) {
+    public init(_ symbol: Symbol, _ location: SourceLocation) {
         self.symbol = symbol
         self.location = location
     }
@@ -192,7 +192,7 @@ public struct Expression {
     }
 
     public let symbol: Symbol
-    public let location: Source.Location
+    public let location: SourceLocation
 }
 
 extension Expression: CustomStringConvertible {
