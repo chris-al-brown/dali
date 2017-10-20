@@ -26,7 +26,7 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
-
+g
 public typealias Source = String
 
 public typealias SourceIndex = Source.UnicodeScalarIndex
