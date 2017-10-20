@@ -193,11 +193,8 @@ public final class Dali {
         var curly = 0
         var round = 0
         var square = 0
-        var semicolon = 0
         for scalar in source.unicodeScalars {
             switch scalar {
-            case ";":
-                semicolon += 1
             case "{":
                 curly += 1
             case "}":
@@ -214,7 +211,7 @@ public final class Dali {
                 break
             }
         }
-        return !(curly == 0 && round == 0 && square == 0) || semicolon == 0
+        return !(curly == 0 && round == 0 && square == 0)
     }
     
     public func prompt(premature: Bool = false) {

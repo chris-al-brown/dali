@@ -2,95 +2,95 @@
 % This is a comment
 
 % Variables
-var x: true;
-var y: 10;
-var z: "string";
-var w: 1.0;
+var x: true
+var y: 10
+var z: "string"
+var w: 1.0
 
 % Functions
-func name: (x, y, z) { x + y + z; }
+func name: (x, y, z) { x + y + z }
 
 % Primitives
 
 % Boolean
-var bool: true;
-bool: false;
+var bool: true
+bool: false
 
 % Color
-var color: #efefef;
-color: #000000;
-color: #0000FF;
+var color: #efefef
+color: #000000
+color: #0000FF
 
 % Number
-var number: 1.0;
-number: 0;
-number: -0.4;
+var number: 1.0
+number: 0
+number: -0.4
 
 % String
-var string: "This is a string";
+var string: "This is a string"
 
 % Usage
-var call: function(1.0, 2.0);
+var call: function(1.0, 2.0)
 
 % Operators
 
 % Addition
-third: first + second;
+third: first + second
 
 % Subtraction
-third: first - second;
+third: first - second
 
 % Multiplication
-third: first * second;
+third: first * second
 
 % Division
-third: first / second;
+third: first / second
 
 % Negation
-third: -first;
+third: -first
 
 % Equality
-first = second;
+first = second
 
 % Less than
-first < second;
+first < second
 
 % Greater than
-first > second;
+first > second
 
 % Negation
-!(first = second);
+!(first = second)
 
 % And
-first & second;
+first & second
 
 % Or
-first | second | third;
+first | second | third
 
 % Grouping
-value: ((true & true) | false);
+value: ((true & true) | false)
 
 % Standard Library
 
 % Mix
-mix(true, false, range(0, 1, 1 / 1000));
+mix(true, false, range(0, 1, 1 / 1000))
 
 % Print
-print(name);
-print(true);
-print(1.0);
+print(name)
+print(true)
+print(1.0)
 
 % Range
-range(0.0, 1.0, 0.1);
+range(0.0, 1.0, 0.1)
 
 % Random
-random(#EFEFEF, #FFFFFF, #C0C0C0);
-random(true, false);
+random(#EFEFEF, #FFFFFF, #C0C0C0)
+random(true, false)
 
 % Future
 
 % Control Flow
-z: switch(condition, x, y);
+z: switch(condition, x, y)
 
 % Anonymous Functions
 % @(x, y, z) { x + y + z }

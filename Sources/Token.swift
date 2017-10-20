@@ -60,7 +60,6 @@ public struct Token {
         case curlyRight             /// }
         case parenLeft              /// (
         case parenRight             /// )
-        case semicolon              /// ;
 
         /// Single-character tokens (arithmetic)
         case plus                   /// +
@@ -106,8 +105,6 @@ public struct Token {
             case (.parenLeft, .parenLeft):
                 return true
             case (.parenRight, .parenRight):
-                return true
-            case (.semicolon, .semicolon):
                 return true
             case (.plus, .plus):
                 return true
@@ -174,8 +171,6 @@ extension Token.Lexeme: CustomStringConvertible {
             return "("
         case .parenRight:
             return ")"
-        case .semicolon:
-            return ";"
         case .plus:
             return "+"
         case .minus:

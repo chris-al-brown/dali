@@ -94,7 +94,7 @@ public final class Parser {
         if isFinished { return false }
         return current.lexeme == lexeme
     }
-
+    
     private func consume(_ lexeme: Token.Lexeme) throws -> Token {
         if isFinished {
             throw Error.unexpectedStreamEnd(current)
@@ -104,7 +104,7 @@ public final class Parser {
         }
         throw Error.unexpectedToken(current, lexeme)
     }
-
+    
     private func location(from start: Token) -> SourceLocation {
         return location(from:start.location)
     }
@@ -225,7 +225,6 @@ public final class Parser {
             let _ = try consume(.identifier(lvalue))
             let _ = try consume(.colon)
             let rvalue = try parseExpression()
-            let _ = try consume(.semicolon)
             return AST.Statement(.declaration(.variable(lvalue, rvalue)), location(from:start))
         default:
             throw Error.invalidVarDeclaration(location(from:start))
@@ -238,7 +237,6 @@ public final class Parser {
 
     private func parseExpressionStatement() throws -> AST.Statement {
         let rvalue = try parseExpression()
-        let _ = try consume(.semicolon)
         return AST.Statement(.expression(rvalue), current.location)
     }
     

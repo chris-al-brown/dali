@@ -306,16 +306,16 @@ extension AST.Statement: CustomStringConvertible {
                 }
                 output += ") {\n"
                 output += statement.reduce("") {
-                    return $0 + $1.description + ";\n"
+                    return $0 + $1.description + "\n"
                 }
                 if !args.isEmpty {
                     let _ = output.unicodeScalars.removeLast()
                     let _ = output.unicodeScalars.removeLast()
                 }
-                output += "}"
+                output += "\n}"
                 return output
             case .variable(let name, let value):
-                return "var \(name): \(value.description);"
+                return "var \(name): \(value.description)"
             }
         case .expression(let expression):
             return expression.description

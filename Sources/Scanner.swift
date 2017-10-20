@@ -135,7 +135,7 @@ public final class Scanner {
             /// Whitespace
             case " ", "\t", "\r", "\n":
                 break
-
+                
             /// Single-character tokens
             case ":":
                 append(lexeme:.colon)
@@ -149,10 +149,6 @@ public final class Scanner {
                 append(lexeme:.parenLeft)
             case ")":
                 append(lexeme:.parenRight)
-            case ";":
-                if tokens.last?.lexeme != .semicolon {
-                    append(lexeme:.semicolon)
-                }
 
             /// Single-character tokens (arithmetic)
             case "+":
