@@ -1,0 +1,26 @@
+% Testing closure scoping 
+
+%func name: (first, last) { first + " " + last }
+%print(name("Chris", "Brown"))
+
+func outer: () {
+	print("outer", outer)
+	var x: 1
+	var y: 2
+	print(x, y)
+
+	func inner: () {
+		print("inner", inner)
+		var x: 3
+
+		print(x, y)
+		x: x - 1
+		y: y - 1
+		print(x, y)
+	}
+
+	inner()
+	print(x, y)
+}
+
+outer()

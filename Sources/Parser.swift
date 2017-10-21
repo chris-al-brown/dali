@@ -160,7 +160,7 @@ public final class Parser {
             let _ = try consume(.curlyLeft)
             var body: [ASTStatement] = []
             while !check(.curlyRight) {
-                body.append(try parseExpressionStatement())
+                body.append(try parseDeclaration())
             }
             let _ = try consume(.curlyRight)
             return ASTStatement(.declaration(.function(name, args, body)), location(from:start))

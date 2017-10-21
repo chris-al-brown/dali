@@ -87,12 +87,7 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            let objects = try runtime.evaluate(try parser.parse())
-            objects.forEach {
-                if let object = $0 {
-                    log(object)
-                }
-            }
+            try runtime.evaluate(try parser.parse())
             return .success
         } catch let issue as RuntimeError {
             error(issue, in:source)

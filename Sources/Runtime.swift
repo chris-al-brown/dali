@@ -30,7 +30,7 @@ import Foundation
 public final class Runtime: ASTVisitor {
     
     public init() {
-        self.environment = RuntimeEnvironment()
+        self.environment = RuntimeEnvironment(RuntimeEnvironment.globals)
     }
     
     private func evaluate(_ op: ASTUnaryOperator, _ lhs: RuntimeObject) -> RuntimeObject? {
@@ -114,13 +114,20 @@ public final class Runtime: ASTVisitor {
             return nil
         }
     }
-    
-    public func evaluate(_ statements: [ASTStatement]) throws -> [RuntimeObject?] {
-        return try statements.map { try evaluate($0) }
+
+    public func evaluate(_ statements: [ASTStatement], in environment: RuntimeEnvironment) throws {
+        let current = self.environment
+        self.environment = environment
+        try statements.forEach { try evaluate($0) }
+        self.environment = current
+    }
+
+    public func evaluate(_ statements: [ASTStatement]) throws {
+        try statements.forEach { try evaluate($0) }
     }
     
-    public func evaluate(_ statement: ASTStatement) throws -> RuntimeObject? {
-        return try visit(statement)
+    public func evaluate(_ statement: ASTStatement) throws {
+        try visit(statement)
     }
     
     public func visit(_ expression: ASTExpression) throws -> RuntimeObject? {
@@ -150,9 +157,13 @@ public final class Runtime: ASTVisitor {
                 }
                 values.append(value)
             }
-            guard let output = object.call(self, values) else {
+            guard let function = object as? RuntimeFunction else {
                 throw RuntimeError.objectIsNotCallable(callee.location)
             }
+            if let arity = function.arity, arity != values.count {
+                throw RuntimeError.functionArityMismatch(callee.location)
+            }
+            let output = function.call(self, values)
             return output
         case .color(let value):
             return ColorObject(value)
@@ -184,16 +195,15 @@ public final class Runtime: ASTVisitor {
         }
     }
     
-    public func visit(_ statement: ASTStatement) throws -> RuntimeObject? {
+    public func visit(_ statement: ASTStatement) throws {
         switch statement.type {
         case .declaration(let declaration):
             switch declaration {
-            case .function(_, _, _):
-                
-                // TODO: Create a FunctionObject
-
-                return nil
-                
+            case .function(let name, let arguments, let body):
+                let function = FunctionObject(name, arguments, body, environment)
+                if !environment.define(name, function) {
+                     throw RuntimeError.redefinedVariable(name, statement.location)
+                }
             case .variable(let name, let expression):
                 guard let value = try visit(expression) else {
                     throw RuntimeError.undefinedExpression(expression.location)
@@ -202,20 +212,20 @@ public final class Runtime: ASTVisitor {
                     throw RuntimeError.redefinedVariable(name, statement.location)
                 }
             }
-            return nil
         case .expression(let expression):
-            return try visit(expression)
+            let _ = try visit(expression)
         }
     }
     
-    private let environment: RuntimeEnvironment
+    private var environment: RuntimeEnvironment
 }
 
 public final class RuntimeEnvironment {
     
     public static var globals: RuntimeEnvironment {
         let env = RuntimeEnvironment()
-        let _ = env.define("exit", BooleanObject(false))
+        let _ = env.define("exit", NativeExitFunction())
+        let _ = env.define("print", NativePrintFunction())
         return env
     }
     
@@ -238,7 +248,11 @@ public final class RuntimeEnvironment {
     }
     
     public func get(_ name: TokenIdentifier) -> RuntimeObject? {
-        return values[name]
+        if let value = values[name] {
+            return value
+        } else {
+            return parent?.get(name)
+        }
     }
     
     public func set(_ name: TokenIdentifier, _ value: RuntimeObject) {
@@ -250,6 +264,7 @@ public final class RuntimeEnvironment {
 }
 
 public enum RuntimeError: Swift.Error, CustomStringConvertible {
+    case functionArityMismatch(SourceLocation)
     case invalidKeywordUsage(TokenKeyword, SourceLocation)
     case redefinedVariable(TokenIdentifier, SourceLocation)
     case objectIsNotCallable(SourceLocation)
@@ -258,6 +273,8 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
     
     public var description: String {
         switch self {
+        case .functionArityMismatch(_):
+            return "Function received the wrong number of arguments."
         case .invalidKeywordUsage(let keyword, _):
             return "Reserved keyword '\(keyword)' cannot be used in an expression."
         case .redefinedVariable(let name, _):
@@ -273,6 +290,8 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
     
     public var location: SourceLocation {
         switch self {
+        case .functionArityMismatch(let location):
+            return location
         case .invalidKeywordUsage(_, let location):
             return location
         case .redefinedVariable(_, let location):
@@ -287,8 +306,11 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
     }
 }
 
-public protocol RuntimeObject: CustomStringConvertible {
+public protocol RuntimeObject: CustomStringConvertible {}
+
+public protocol RuntimeFunction: RuntimeObject {
     func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject?
+    var arity: Int? { get }
 }
 
 public struct BooleanObject: RuntimeObject {
@@ -313,10 +335,6 @@ public struct BooleanObject: RuntimeObject {
         self.value = value
     }
     
-    public func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject? {
-        return nil
-    }
-    
     public var description: String {
         return "<boolean \(value)>"
     }
@@ -334,10 +352,6 @@ public struct ColorObject: RuntimeObject {
         self.value = value
     }
     
-    public func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject? {
-        return nil
-    }
-    
     public var description: String {
         return "<color \(value)>"
     }
@@ -345,7 +359,52 @@ public struct ColorObject: RuntimeObject {
     public let value: UInt32
 }
 
-// TODO: Create a FunctionObject
+public struct FunctionObject: RuntimeFunction {
+    
+    public init(_ name: String, _ arguments: [String], _ body: [ASTStatement], _ closure: RuntimeEnvironment) {
+        self.name = name
+        self.arguments = arguments
+        self.body = body
+        self.closure = closure
+    }
+    
+    public func call(_ runtime: Runtime, _ values : [RuntimeObject]) -> RuntimeObject? {
+        let environment = RuntimeEnvironment(closure)
+        for (argument, value) in zip(self.arguments, values) {
+            let _ = environment.define(argument, value)
+        }
+        do {
+            // TODO: Needs a return statement or else nothing is ever returned
+            try runtime.evaluate(body, in:environment)
+        } catch let error {
+            fatalError("FunctionObject call resulted in an unhandled error: " + error.localizedDescription)
+        }
+        return nil
+    }
+    
+    public var description: String {
+        var output = ""
+        output += "\(name)("
+        output += arguments.reduce("") {
+            return $0 + $1 + ", "
+        }
+        if !arguments.isEmpty {
+            let _ = output.unicodeScalars.removeLast()
+            let _ = output.unicodeScalars.removeLast()
+        }
+        output += ")"
+        return "<function \(output)>"
+    }
+    
+    public var arity: Int? {
+        return arguments.count
+    }
+
+    public let name: String
+    public let arguments: [String]
+    public let body: [ASTStatement]
+    public let closure: RuntimeEnvironment
+}
 
 public struct NumberObject: RuntimeObject {
     
@@ -388,11 +447,7 @@ public struct NumberObject: RuntimeObject {
     public init(_ value: Double) {
         self.value = value
     }
-    
-    public func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject? {
-        return nil
-    }
-    
+
     public var description: String {
         return "<number \(value)>"
     }
@@ -412,10 +467,6 @@ public struct StringObject: RuntimeObject {
 
     public init(_ value: String) {
         self.value = value
-    }
-
-    public func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject? {
-        return nil
     }
 
     public var description: String {
