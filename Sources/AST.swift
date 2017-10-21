@@ -45,7 +45,7 @@ public struct AST {
             case divide         = "/"
             
             case equalTo        = "="
-            case lessThan       = "<"
+            case lesserThan     = "<"
             case greaterThan    = ">"
             
             case and            = "&"
@@ -64,7 +64,7 @@ public struct AST {
                 case .equal:
                     self = .equalTo
                 case .carrotLeft:
-                    self = .lessThan
+                    self = .lesserThan
                 case .carrotRight:
                     self = .greaterThan
                 case .ampersand:
@@ -88,7 +88,7 @@ public struct AST {
                     return .slash
                 case .equalTo:
                     return .equal
-                case .lessThan:
+                case .lesserThan:
                     return .carrotLeft
                 case .greaterThan:
                     return .carrotRight
@@ -107,7 +107,7 @@ public struct AST {
                     return 20
                 case .equalTo:
                     return 30
-                case .lessThan:
+                case .lesserThan:
                     return 40
                 case .greaterThan:
                     return 40
@@ -140,7 +140,7 @@ public struct AST {
             /// x
             case getter(Token.Identifier)
             
-            /// pi
+            /// var
             case keyword(Token.Keyword)
             
             /// 1.512

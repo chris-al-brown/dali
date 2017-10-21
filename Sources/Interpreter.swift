@@ -69,24 +69,104 @@ public final class Interpreter {
     
     public init() {
         self.environment = Environment()
-        self.globals = Environment.globals
     }
     
-    public func interpret(_ statements: [AST.Statement]) throws -> [Object?] {
+    public func interpret(_ statements: [AST.Statement]) throws -> [RuntimeObject?] {
         return try statements.map { try interpret($0) }
     }
     
-    public func interpret(_ statement: AST.Statement) throws -> Object? {
+    public func interpret(_ statement: AST.Statement) throws -> RuntimeObject? {
         return try visit(statement)
+    }
+    
+    private func apply(_ op: AST.Expression.UnaryOperator, _ lhs: RuntimeObject) -> RuntimeObject? {
+        switch op {
+        case .negative:
+            if let left = lhs as? NumberObject {
+                return -left
+            }
+            return nil
+        case .not:
+            if let left = lhs as? BooleanObject {
+                return !left
+            }
+            return nil
+        case .positive:
+            if let left = lhs as? NumberObject {
+                return +left
+            }
+            return nil
+        }
+    }
+    
+    private func apply(_ op: AST.Expression.BinaryOperator, _ lhs: RuntimeObject, _ rhs: RuntimeObject) -> RuntimeObject? {
+        switch op {
+        case .add:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left + right
+            }
+            if let left = lhs as? StringObject, let right = rhs as? StringObject {
+                return left + right
+            }
+            return nil
+        case .and:
+            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
+                return left && right
+            }
+            return nil
+        case .divide:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left / right
+            }
+            return nil
+        case .equalTo:
+            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
+                return left == right
+            }
+            if let left = lhs as? ColorObject, let right = rhs as? ColorObject {
+                return left == right
+            }
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left == right
+            }
+            if let left = lhs as? StringObject, let right = rhs as? StringObject {
+                return left == right
+            }
+            return nil
+        case .greaterThan:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left > right
+            }
+            return nil
+        case .lesserThan:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left < right
+            }
+            return nil
+        case .multiply:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left * right
+            }
+            return nil
+        case .or:
+            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
+                return left || right
+            }
+            return nil
+        case .subtract:
+            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
+                return left - right
+            }
+            return nil
+        }
     }
 
     private let environment: Environment
-    private let globals: Environment
 }
 
 extension Interpreter: ASTVisitor {
     
-    public func visit(_ expression: AST.Expression) throws -> Object? {
+    public func visit(_ expression: AST.Expression) throws -> RuntimeObject? {
         switch expression.symbol {
         case .binary(let lhs, let op, let rhs):
             guard let lvalue = try visit(lhs) else {
@@ -95,60 +175,17 @@ extension Interpreter: ASTVisitor {
             guard let rvalue = try visit(rhs) else {
                 throw Error.undefinedExpression(rhs.location)
             }
-            switch op {
-            case .add:
-                guard let object = (lvalue + rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .and:
-                guard let object = (lvalue && rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .divide:
-                guard let object = (lvalue / rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .equalTo:
-                guard let object = (lvalue == rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .greaterThan:
-                guard let object = (lvalue > rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .lessThan:
-                guard let object = (lvalue < rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .multiply:
-                guard let object = (lvalue * rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .or:
-                guard let object = (lvalue || rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .subtract:
-                guard let object = (lvalue - rvalue) else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
+            guard let value = apply(op, lvalue, rvalue) else {
+                throw Error.undefinedExpression(lhs.location)
             }
+            return value
         case .boolean(let value):
-            return .boolean(value)
+            return BooleanObject(value)
         case .call(let callee, let arguments):
             guard let object = try visit(callee) else {
                 throw Error.undefinedExpression(expression.location)
             }
-            var values: [Object] = []
+            var values: [RuntimeObject] = []
             values.reserveCapacity(arguments.count)
             for argument in arguments {
                 guard let value = try visit(argument) else {
@@ -161,7 +198,7 @@ extension Interpreter: ASTVisitor {
             }
             return output
         case .color(let value):
-            return .color(value)
+            return ColorObject(value)
         case .getter(let name):
             guard let value = environment.get(name) else {
                 throw Error.undefinedVariable(name, expression.location)
@@ -170,7 +207,7 @@ extension Interpreter: ASTVisitor {
         case .keyword(let name):
             throw Error.invalidKeywordUsage(name, expression.location)
         case .number(let value):
-            return .number(value)
+            return NumberObject(value)
         case .setter(let name, let expression):
             guard let value = try visit(expression) else {
                 throw Error.undefinedExpression(expression.location)
@@ -178,32 +215,19 @@ extension Interpreter: ASTVisitor {
             environment.set(name, value)
             return nil
         case .string(let value):
-            return .string(value)
+            return StringObject(value)
         case .unary(let op, let rhs):
-            guard let value = try visit(rhs) else {
+            guard let rvalue = try visit(rhs) else {
                 throw Error.undefinedExpression(rhs.location)
             }
-            switch op {
-            case .not:
-                guard let object = !value else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .negative:
-                guard let object = -value else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
-            case .positive:
-                guard let object = +value else {
-                    throw Error.undefinedExpression(expression.location)
-                }
-                return object
+            guard let value = apply(op, rvalue) else {
+                throw Error.undefinedExpression(rhs.location)
             }
+            return value
         }
     }
     
-    public func visit(_ statement: AST.Statement) throws -> Object? {
+    public func visit(_ statement: AST.Statement) throws -> RuntimeObject? {
         switch statement.symbol {
         case .declaration(let declaration):
             switch declaration {

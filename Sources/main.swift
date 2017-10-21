@@ -181,7 +181,7 @@ public final class Dali {
         print(expression.description)
     }
     
-    public func log(_ object: Object) {
+    public func log(_ object: RuntimeObject) {
         print(object.description)
     }
     
