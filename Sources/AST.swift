@@ -30,205 +30,113 @@ import Foundation
 public protocol ASTVisitor {
     associatedtype ASTExpressionValue
     associatedtype ASTStatementValue
-    func visit(_ expression: AST.Expression) throws -> ASTExpressionValue
-    func visit(_ statement: AST.Statement) throws -> ASTStatementValue
+    func visit(_ expression: ASTExpression) throws -> ASTExpressionValue
+    func visit(_ statement: ASTStatement) throws -> ASTStatementValue
 }
 
-public struct AST {
+public enum ASTBinaryOperator: String {
+    case add            = "+"
+    case subtract       = "-"
+    case multiply       = "*"
+    case divide         = "/"
     
-    public struct Expression {
-        
-        public enum BinaryOperator: String {
-            case add            = "+"
-            case subtract       = "-"
-            case multiply       = "*"
-            case divide         = "/"
-            
-            case equalTo        = "="
-            case lesserThan     = "<"
-            case greaterThan    = ">"
-            
-            case and            = "&"
-            case or             = "|"
-            
-            public init?(_ lexeme: Token.Lexeme) {
-                switch lexeme {
-                case .plus:
-                    self = .add
-                case .minus:
-                    self = .subtract
-                case .star:
-                    self = .multiply
-                case .slash:
-                    self = .divide
-                case .equal:
-                    self = .equalTo
-                case .carrotLeft:
-                    self = .lesserThan
-                case .carrotRight:
-                    self = .greaterThan
-                case .ampersand:
-                    self = .and
-                case .bar:
-                    self = .or
-                default:
-                    return nil
-                }
-            }
-            
-            public var lexeme: Token.Lexeme {
-                switch self {
-                case .add:
-                    return .plus
-                case .subtract:
-                    return .minus
-                case .multiply:
-                    return .star
-                case .divide:
-                    return .slash
-                case .equalTo:
-                    return .equal
-                case .lesserThan:
-                    return .carrotLeft
-                case .greaterThan:
-                    return .carrotRight
-                case .and:
-                    return .ampersand
-                case .or:
-                    return .bar
-                }
-            }
-            
-            public var precedence: Int {
-                switch self {
-                case .and:
-                    return 10
-                case .or:
-                    return 20
-                case .equalTo:
-                    return 30
-                case .lesserThan:
-                    return 40
-                case .greaterThan:
-                    return 40
-                case .add:
-                    return 50
-                case .subtract:
-                    return 50
-                case .multiply:
-                    return 60
-                case .divide:
-                    return 60
-                }
-            }
+    case equalTo        = "="
+    case lesserThan     = "<"
+    case greaterThan    = ">"
+    
+    case and            = "&"
+    case or             = "|"
+    
+    public init?(_ lexeme: TokenLexeme) {
+        switch lexeme {
+        case .plus:
+            self = .add
+        case .minus:
+            self = .subtract
+        case .star:
+            self = .multiply
+        case .slash:
+            self = .divide
+        case .equal:
+            self = .equalTo
+        case .carrotLeft:
+            self = .lesserThan
+        case .carrotRight:
+            self = .greaterThan
+        case .ampersand:
+            self = .and
+        case .bar:
+            self = .or
+        default:
+            return nil
         }
-        
-        public indirect enum Symbol {
-            
-            /// 1 + 1
-            case binary(Expression, BinaryOperator, Expression)
-            
-            /// false
-            case boolean(Bool)
-            
-            /// mix(#000000, #ffffff, 0.5)
-            case call(Expression, [Expression])
-            
-            /// #ffffff
-            case color(UInt32)
-            
-            /// x
-            case getter(Token.Identifier)
-            
-            /// var
-            case keyword(Token.Keyword)
-            
-            /// 1.512
-            case number(Double)
-            
-            /// name: "Chris"
-            case setter(Token.Identifier, Expression)
-            
-            /// "message"
-            case string(String)
-            
-            /// !true
-            case unary(UnaryOperator, Expression)
-        }
-        
-        public enum UnaryOperator: String {
-            case positive   = "+"
-            case negative   = "-"
-            case not        = "!"
-            
-            public init?(_ lexeme: Token.Lexeme) {
-                switch lexeme {
-                case .plus:
-                    self = .positive
-                case .minus:
-                    self = .negative
-                case .exclamation:
-                    self = .not
-                default:
-                    return nil
-                }
-            }
-            
-            public var lexeme: Token.Lexeme {
-                switch self {
-                case .positive:
-                    return .plus
-                case .negative:
-                    return .minus
-                case .not:
-                    return .exclamation
-                }
-            }
-        }
-        
-        public init(_ symbol: Symbol, _ location: SourceLocation) {
-            self.symbol = symbol
-            self.location = location
-        }
-        
-        public func accept<Visitor: ASTVisitor>(_ visitor: Visitor) throws -> Visitor.ASTExpressionValue {
-            return try visitor.visit(self)
-        }
-        
-        public let symbol: Symbol
-        public let location: SourceLocation
     }
     
-    public struct Statement {
-        
-        public enum Declaration {
-            case variable(Token.Identifier, Expression)
-            case function(Token.Identifier, [Token.Identifier], [Statement])
+    public var lexeme: TokenLexeme {
+        switch self {
+        case .add:
+            return .plus
+        case .subtract:
+            return .minus
+        case .multiply:
+            return .star
+        case .divide:
+            return .slash
+        case .equalTo:
+            return .equal
+        case .lesserThan:
+            return .carrotLeft
+        case .greaterThan:
+            return .carrotRight
+        case .and:
+            return .ampersand
+        case .or:
+            return .bar
         }
-        
-        public enum Symbol {
-            case declaration(Declaration)
-            case expression(Expression)
+    }
+    
+    public var precedence: Int {
+        switch self {
+        case .and:
+            return 10
+        case .or:
+            return 20
+        case .equalTo:
+            return 30
+        case .lesserThan:
+            return 40
+        case .greaterThan:
+            return 40
+        case .add:
+            return 50
+        case .subtract:
+            return 50
+        case .multiply:
+            return 60
+        case .divide:
+            return 60
         }
-        
-        public init(_ symbol: Symbol, _ location: SourceLocation) {
-            self.symbol = symbol
-            self.location = location
-        }
-        
-        public func accept<Visitor: ASTVisitor>(_ visitor: Visitor) throws -> Visitor.ASTStatementValue {
-            return try visitor.visit(self)
-        }
-        
-        public let symbol: Symbol
-        public let location: SourceLocation
     }
 }
 
-extension AST.Expression: CustomStringConvertible {
+public enum ASTDeclaration {
+    case variable(TokenIdentifier, ASTExpression)
+    case function(TokenIdentifier, [TokenIdentifier], [ASTStatement])
+}
+
+public struct ASTExpression: CustomStringConvertible {
+    
+    public init(_ type: ASTExpressionType, _ location: SourceLocation) {
+        self.type = type
+        self.location = location
+    }
+    
+    public func accept<Visitor: ASTVisitor>(_ visitor: Visitor) throws -> Visitor.ASTExpressionValue {
+        return try visitor.visit(self)
+    }
     
     public var description: String {
-        switch symbol {
+        switch type {
         case .binary(let lhs, let op, let rhs):
             var output = ""
             output += "("
@@ -287,12 +195,57 @@ extension AST.Expression: CustomStringConvertible {
             return output
         }
     }
+    
+    public let type: ASTExpressionType
+    public let location: SourceLocation
 }
 
-extension AST.Statement: CustomStringConvertible {
+public indirect enum ASTExpressionType {
+    
+    /// 1 + 1
+    case binary(ASTExpression, ASTBinaryOperator, ASTExpression)
+    
+    /// false
+    case boolean(Bool)
+    
+    /// mix(#000000, #ffffff, 0.5)
+    case call(ASTExpression, [ASTExpression])
+    
+    /// #ffffff
+    case color(UInt32)
+    
+    /// x
+    case getter(TokenIdentifier)
+    
+    /// var
+    case keyword(TokenKeyword)
+    
+    /// 1.512
+    case number(Double)
+    
+    /// name: "Chris"
+    case setter(TokenIdentifier, ASTExpression)
+    
+    /// "message"
+    case string(String)
+    
+    /// !true
+    case unary(ASTUnaryOperator, ASTExpression)
+}
+
+public struct ASTStatement: CustomStringConvertible {
+    
+    public init(_ type: ASTStatementType, _ location: SourceLocation) {
+        self.type = type
+        self.location = location
+    }
+    
+    public func accept<Visitor: ASTVisitor>(_ visitor: Visitor) throws -> Visitor.ASTStatementValue {
+        return try visitor.visit(self)
+    }
     
     public var description: String {
-        switch symbol {
+        switch type {
         case .declaration(let declaration):
             switch declaration {
             case .function(let name, let args, let statement):
@@ -321,4 +274,43 @@ extension AST.Statement: CustomStringConvertible {
             return expression.description
         }
     }
+
+    public let type: ASTStatementType
+    public let location: SourceLocation
 }
+
+public enum ASTStatementType {
+    case declaration(ASTDeclaration)
+    case expression(ASTExpression)
+}
+
+public enum ASTUnaryOperator: String {
+    case positive   = "+"
+    case negative   = "-"
+    case not        = "!"
+    
+    public init?(_ lexeme: TokenLexeme) {
+        switch lexeme {
+        case .plus:
+            self = .positive
+        case .minus:
+            self = .negative
+        case .exclamation:
+            self = .not
+        default:
+            return nil
+        }
+    }
+    
+    public var lexeme: TokenLexeme {
+        switch self {
+        case .positive:
+            return .plus
+        case .negative:
+            return .minus
+        case .not:
+            return .exclamation
+        }
+    }
+}
+

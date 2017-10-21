@@ -29,54 +29,6 @@ import Foundation
 
 public final class Parser {
 
-    public enum Error: Swift.Error, CustomStringConvertible {
-        case invalidArgument(Token)
-        case invalidAssignment(SourceLocation)
-        case invalidFuncDeclaration(SourceLocation)
-        case invalidSyntax(Token)
-        case invalidVarDeclaration(SourceLocation)
-        case unexpectedStreamEnd(Token)
-        case unexpectedToken(Token, Token.Lexeme)
-
-        public var description: String {
-            switch self {
-            case .invalidArgument(let token):
-                return "Unexpected closure argument at '\(token.lexeme)'"
-            case .invalidAssignment(_):
-                return "Can not assign to the left side of the expression."
-            case .invalidFuncDeclaration(_):
-                return "Invalid syntax for a function declaration."
-            case .invalidSyntax(let token):
-                return "Unrecognized syntax starting at '\(token.lexeme)'."
-            case .invalidVarDeclaration(_):
-                return "Invalid syntax for a variable declaration."
-            case .unexpectedStreamEnd(let token):
-                return "Expected more characters to complete expression near '\(token.lexeme)'."
-            case .unexpectedToken(let token, let expected):
-                return "Expected to see '\(expected)' but found '\(token.lexeme)' instead."
-            }
-        }
-
-        public var location: SourceLocation {
-            switch self {
-            case .invalidArgument(let token):
-                return token.location
-            case .invalidAssignment(let location):
-                return location
-            case .invalidFuncDeclaration(let location):
-                return location
-            case .invalidSyntax(let token):
-                return token.location
-            case .invalidVarDeclaration(let location):
-                return location
-            case .unexpectedStreamEnd(let token):
-                return token.location
-            case .unexpectedToken(let token, _):
-                return token.location
-            }
-        }
-    }
-
     public init(_ tokens: [Token]) {
         self.tokens = tokens
         self.statements = []
@@ -90,19 +42,19 @@ public final class Parser {
         return token
     }
 
-    private func check(_ lexeme: Token.Lexeme) -> Bool {
+    private func check(_ lexeme: TokenLexeme) -> Bool {
         if isFinished { return false }
         return current.lexeme == lexeme
     }
     
-    private func consume(_ lexeme: Token.Lexeme) throws -> Token {
+    private func consume(_ lexeme: TokenLexeme) throws -> Token {
         if isFinished {
-            throw Error.unexpectedStreamEnd(current)
+            throw ParserError.unexpectedStreamEnd(current)
         }
         if check(lexeme) {
             return advance()
         }
-        throw Error.unexpectedToken(current, lexeme)
+        throw ParserError.unexpectedToken(current, lexeme)
     }
     
     private func location(from start: Token) -> SourceLocation {
@@ -113,7 +65,7 @@ public final class Parser {
         return start.lowerBound..<previous.location.upperBound
     }
 
-    public func parse() throws -> [AST.Statement] {
+    public func parse() throws -> [ASTStatement] {
         reset()
         while !isFinished {
             statements.append(try parseDeclaration())
@@ -121,32 +73,32 @@ public final class Parser {
         return statements
     }
 
-    private func parseBinary(_ lhs: AST.Expression, _ precedence: Int = 0) throws -> AST.Expression {
+    private func parseBinary(_ lhs: ASTExpression, _ precedence: Int = 0) throws -> ASTExpression {
         var lhs = lhs
         while true {
-            guard let binary = AST.Expression.BinaryOperator(current.lexeme), binary.precedence >= precedence else {
+            guard let binary = ASTBinaryOperator(current.lexeme), binary.precedence >= precedence else {
                 return lhs
             }
             let _ = try consume(binary.lexeme)
             var rhs = try parseUnary()
-            if let nextBinary = AST.Expression.BinaryOperator(current.lexeme), binary.precedence < nextBinary.precedence {
+            if let nextBinary = ASTBinaryOperator(current.lexeme), binary.precedence < nextBinary.precedence {
                 rhs = try parseBinary(rhs, binary.precedence + 1)
             }
-            lhs = AST.Expression(.binary(lhs, binary, rhs), location(from:lhs.location))
+            lhs = ASTExpression(.binary(lhs, binary, rhs), location(from:lhs.location))
         }
     }
 
-    private func parseBoolean(_ value: Bool) throws -> AST.Expression {
+    private func parseBoolean(_ value: Bool) throws -> ASTExpression {
         let start = current
         let _ = try consume(.boolean(value))
-        return AST.Expression(.boolean(value), location(from:start))
+        return ASTExpression(.boolean(value), location(from:start))
     }
 
-    private func parseCall(_ lhs: AST.Expression) throws -> AST.Expression {
+    private func parseCall(_ lhs: ASTExpression) throws -> ASTExpression {
         switch current.lexeme {
         case .parenLeft:
             let _ = try consume(.parenLeft)
-            var arguments: [AST.Expression] = []
+            var arguments: [ASTExpression] = []
             while !check(.parenRight) {
                 arguments.append(try parseExpression())
                 if check(.comma) {
@@ -154,22 +106,22 @@ public final class Parser {
                 }
             }
             let _ = try consume(.parenRight)
-            return try parseCall(AST.Expression(.call(lhs, arguments), location(from:lhs.location)))
+            return try parseCall(ASTExpression(.call(lhs, arguments), location(from:lhs.location)))
         default:
             return lhs
         }
     }
     
-    private func parseColor(_ value: String) throws -> AST.Expression {
+    private func parseColor(_ value: String) throws -> ASTExpression {
         let start = current
         let _ = try consume(.color(value))
         let scanner = Foundation.Scanner(string:value)
         var uint32: UInt32 = 0
         scanner.scanHexInt32(&uint32)
-        return AST.Expression(.color(uint32), location(from:start))
+        return ASTExpression(.color(uint32), location(from:start))
     }
     
-    private func parseDeclaration() throws -> AST.Statement {
+    private func parseDeclaration() throws -> ASTStatement {
         switch current.lexeme {
         case .keyword(let value):
             switch value {
@@ -183,7 +135,7 @@ public final class Parser {
         }
     }
 
-    private func parseFuncDeclaration() throws -> AST.Statement {
+    private func parseFuncDeclaration() throws -> ASTStatement {
         let start = current
         let _ = try consume(.keyword(.func))
         switch current.lexeme {
@@ -191,7 +143,7 @@ public final class Parser {
             let _ = try consume(.identifier(name))
             let _ = try consume(.colon)
             let _ = try consume(.parenLeft)
-            var args: [Token.Identifier] = []
+            var args: [TokenIdentifier] = []
             while !check(.parenRight) {
                 switch current.lexeme {
                 case .identifier(let value):
@@ -201,23 +153,23 @@ public final class Parser {
                         let _ = try consume(.comma)
                     }
                 default:
-                    throw Error.invalidArgument(current)
+                    throw ParserError.invalidArgument(current)
                 }
             }
             let _ = try consume(.parenRight)
             let _ = try consume(.curlyLeft)
-            var body: [AST.Statement] = []
+            var body: [ASTStatement] = []
             while !check(.curlyRight) {
                 body.append(try parseExpressionStatement())
             }
             let _ = try consume(.curlyRight)
-            return AST.Statement(.declaration(.function(name, args, body)), location(from:start))
+            return ASTStatement(.declaration(.function(name, args, body)), location(from:start))
         default:
-            throw Error.invalidFuncDeclaration(location(from:start))
+            throw ParserError.invalidFuncDeclaration(location(from:start))
         }
     }
     
-    private func parseVarDeclaration() throws -> AST.Statement {
+    private func parseVarDeclaration() throws -> ASTStatement {
         let start = current
         let _ = try consume(.keyword(.var))
         switch current.lexeme {
@@ -225,64 +177,64 @@ public final class Parser {
             let _ = try consume(.identifier(lvalue))
             let _ = try consume(.colon)
             let rvalue = try parseExpression()
-            return AST.Statement(.declaration(.variable(lvalue, rvalue)), location(from:start))
+            return ASTStatement(.declaration(.variable(lvalue, rvalue)), location(from:start))
         default:
-            throw Error.invalidVarDeclaration(location(from:start))
+            throw ParserError.invalidVarDeclaration(location(from:start))
         }
     }
     
-    private func parseStatement() throws -> AST.Statement {
+    private func parseStatement() throws -> ASTStatement {
         return try parseExpressionStatement()
     }
 
-    private func parseExpressionStatement() throws -> AST.Statement {
+    private func parseExpressionStatement() throws -> ASTStatement {
         let rvalue = try parseExpression()
-        return AST.Statement(.expression(rvalue), current.location)
+        return ASTStatement(.expression(rvalue), current.location)
     }
     
-    private func parseExpression() throws -> AST.Expression {
+    private func parseExpression() throws -> ASTExpression {
         let start = current
         let unary = try parseUnary()
         let lhs = try parseBinary(unary)
         if check(.colon) {
             let _ = try consume(.colon)
             let rhs = try parseExpression()
-            switch lhs.symbol {
+            switch lhs.type {
             case .getter(let name):
-                return AST.Expression(.setter(name, rhs), location(from:start))
+                return ASTExpression(.setter(name, rhs), location(from:start))
             default:
-                throw Error.invalidAssignment(location(from:start))
+                throw ParserError.invalidAssignment(location(from:start))
             }
         }
         return lhs
     }
 
-    private func parseGroup() throws -> AST.Expression {
+    private func parseGroup() throws -> ASTExpression {
         let _ = try consume(.parenLeft)
         let result = try parseExpression()
         let _ = try consume(.parenRight)
         return result
     }
 
-    private func parseIdentifier(_ value: Token.Identifier) throws -> AST.Expression {
+    private func parseIdentifier(_ value: TokenIdentifier) throws -> ASTExpression {
         let start = current
         let _ = try consume(.identifier(value))
-        return AST.Expression(.getter(value), location(from:start))
+        return ASTExpression(.getter(value), location(from:start))
     }
 
-    private func parseKeyword(_ value: Token.Keyword) throws -> AST.Expression {
+    private func parseKeyword(_ value: TokenKeyword) throws -> ASTExpression {
         let start = current
         let _ = try consume(.keyword(value))
-        return AST.Expression(.keyword(value), location(from:start))
+        return ASTExpression(.keyword(value), location(from:start))
     }
     
-    private func parseNumber(_ value: Double) throws -> AST.Expression {
+    private func parseNumber(_ value: Double) throws -> ASTExpression {
         let start = current
         let _ = try consume(.number(value))
-        return AST.Expression(.number(value), location(from:start))
+        return ASTExpression(.number(value), location(from:start))
     }
 
-    private func parsePrimary() throws -> AST.Expression {
+    private func parsePrimary() throws -> ASTExpression {
         switch current.lexeme {
         case .boolean(let value):
             return try parseBoolean(value)
@@ -299,23 +251,23 @@ public final class Parser {
         case .string(let value):
             return try parseString(value)
         default:
-            throw Error.invalidSyntax(current)
+            throw ParserError.invalidSyntax(current)
         }
     }
     
-    private func parseString(_ value: String) throws -> AST.Expression {
+    private func parseString(_ value: String) throws -> ASTExpression {
         let start = current
         let _ = try consume(.string(value))
-        return AST.Expression(.string(value), location(from:start))
+        return ASTExpression(.string(value), location(from:start))
     }
 
-    private func parseUnary() throws -> AST.Expression {
+    private func parseUnary() throws -> ASTExpression {
         let start = current
-        guard let unary = AST.Expression.UnaryOperator(current.lexeme) else {
+        guard let unary = ASTUnaryOperator(current.lexeme) else {
             return try parseCall(try parsePrimary())
         }
         let _ = try consume(unary.lexeme)
-        return AST.Expression(.unary(unary, try parseUnary()), location(from:start))
+        return ASTExpression(.unary(unary, try parseUnary()), location(from:start))
     }
 
     private func reset() {
@@ -336,9 +288,55 @@ public final class Parser {
     }
 
     private let tokens: [Token]
-    private var statements: [AST.Statement]
+    private var statements: [ASTStatement]
     private var currentId: Int
     private var currentIndex: Int
 }
 
-
+public enum ParserError: Swift.Error, CustomStringConvertible {
+    case invalidArgument(Token)
+    case invalidAssignment(SourceLocation)
+    case invalidFuncDeclaration(SourceLocation)
+    case invalidSyntax(Token)
+    case invalidVarDeclaration(SourceLocation)
+    case unexpectedStreamEnd(Token)
+    case unexpectedToken(Token, TokenLexeme)
+    
+    public var description: String {
+        switch self {
+        case .invalidArgument(let token):
+            return "Unexpected closure argument at '\(token.lexeme)'"
+        case .invalidAssignment(_):
+            return "Can not assign to the left side of the expression."
+        case .invalidFuncDeclaration(_):
+            return "Invalid syntax for a function declaration."
+        case .invalidSyntax(let token):
+            return "Unrecognized syntax starting at '\(token.lexeme)'."
+        case .invalidVarDeclaration(_):
+            return "Invalid syntax for a variable declaration."
+        case .unexpectedStreamEnd(let token):
+            return "Expected more characters to complete expression near '\(token.lexeme)'."
+        case .unexpectedToken(let token, let expected):
+            return "Expected to see '\(expected)' but found '\(token.lexeme)' instead."
+        }
+    }
+    
+    public var location: SourceLocation {
+        switch self {
+        case .invalidArgument(let token):
+            return token.location
+        case .invalidAssignment(let location):
+            return location
+        case .invalidFuncDeclaration(let location):
+            return location
+        case .invalidSyntax(let token):
+            return token.location
+        case .invalidVarDeclaration(let location):
+            return location
+        case .unexpectedStreamEnd(let token):
+            return token.location
+        case .unexpectedToken(let token, _):
+            return token.location
+        }
+    }
+}

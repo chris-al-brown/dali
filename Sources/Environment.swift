@@ -29,6 +29,12 @@ import Foundation
 
 public final class Environment {
     
+    public static var globals: Environment {
+        let env = Environment()
+        let _ = env.define("exit", BooleanObject(false))
+        return env
+    }
+    
     public init() {
         self.parent = nil
         self.values = [:]
@@ -39,7 +45,7 @@ public final class Environment {
         self.values = [:]
     }
     
-    public func define(_ name: Token.Identifier, _ value: RuntimeObject) -> Bool {
+    public func define(_ name: TokenIdentifier, _ value: RuntimeObject) -> Bool {
         if values[name] == nil {
             set(name, value)
             return true
@@ -47,14 +53,14 @@ public final class Environment {
         return false
     }
     
-    public func get(_ name: Token.Identifier) -> RuntimeObject? {
+    public func get(_ name: TokenIdentifier) -> RuntimeObject? {
         return values[name]
     }
     
-    public func set(_ name: Token.Identifier, _ value: RuntimeObject) {
+    public func set(_ name: TokenIdentifier, _ value: RuntimeObject) {
         values[name] = value
     }
     
     private let parent: Environment?
-    private var values: [Token.Identifier: RuntimeObject]
+    private var values: [TokenIdentifier: RuntimeObject]
 }

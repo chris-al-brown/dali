@@ -27,59 +27,13 @@
 
 import Foundation
 
-public final class Interpreter {
-    
-    public enum Error: Swift.Error, CustomStringConvertible {
-        case invalidKeywordUsage(Token.Keyword, SourceLocation)
-        case redefinedVariable(Token.Identifier, SourceLocation)
-        case objectIsNotCallable(SourceLocation)
-        case undefinedVariable(Token.Identifier, SourceLocation)
-        case undefinedExpression(SourceLocation)
-        
-        public var description: String {
-            switch self {
-            case .invalidKeywordUsage(let keyword, _):
-                return "Reserved keyword '\(keyword)' cannot be used in an expression."
-            case .redefinedVariable(let name, _):
-                return "Variable '\(name)' has already been defined in this scope."
-            case .objectIsNotCallable(_):
-                return "Object is not a callable function."
-            case .undefinedVariable(let name, _):
-                return "Variable '\(name)' is undefined in this scope."
-            case .undefinedExpression(_):
-                return "Expression is undefined."
-            }
-        }
-
-        public var location: SourceLocation {
-            switch self {
-            case .invalidKeywordUsage(_, let location):
-                return location
-            case .redefinedVariable(_, let location):
-                return location
-            case .objectIsNotCallable(let location):
-                return location
-            case .undefinedVariable(_, let location):
-                return location
-            case .undefinedExpression(let location):
-                return location
-            }
-        }
-    }
+public final class Interpreter: ASTVisitor {
     
     public init() {
         self.environment = Environment()
     }
     
-    public func interpret(_ statements: [AST.Statement]) throws -> [RuntimeObject?] {
-        return try statements.map { try interpret($0) }
-    }
-    
-    public func interpret(_ statement: AST.Statement) throws -> RuntimeObject? {
-        return try visit(statement)
-    }
-    
-    private func apply(_ op: AST.Expression.UnaryOperator, _ lhs: RuntimeObject) -> RuntimeObject? {
+    private func evaluate(_ op: ASTUnaryOperator, _ lhs: RuntimeObject) -> RuntimeObject? {
         switch op {
         case .negative:
             if let left = lhs as? NumberObject {
@@ -99,7 +53,7 @@ public final class Interpreter {
         }
     }
     
-    private func apply(_ op: AST.Expression.BinaryOperator, _ lhs: RuntimeObject, _ rhs: RuntimeObject) -> RuntimeObject? {
+    private func evaluate(_ lhs: RuntimeObject, _ op: ASTBinaryOperator, _ rhs: RuntimeObject) -> RuntimeObject? {
         switch op {
         case .add:
             if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
@@ -160,57 +114,60 @@ public final class Interpreter {
             return nil
         }
     }
-
-    private let environment: Environment
-}
-
-extension Interpreter: ASTVisitor {
     
-    public func visit(_ expression: AST.Expression) throws -> RuntimeObject? {
-        switch expression.symbol {
+    public func interpret(_ statements: [ASTStatement]) throws -> [RuntimeObject?] {
+        return try statements.map { try interpret($0) }
+    }
+    
+    public func interpret(_ statement: ASTStatement) throws -> RuntimeObject? {
+        return try visit(statement)
+    }
+    
+    public func visit(_ expression: ASTExpression) throws -> RuntimeObject? {
+        switch expression.type {
         case .binary(let lhs, let op, let rhs):
             guard let lvalue = try visit(lhs) else {
-                throw Error.undefinedExpression(lhs.location)
+                throw InterpreterError.undefinedExpression(lhs.location)
             }
             guard let rvalue = try visit(rhs) else {
-                throw Error.undefinedExpression(rhs.location)
+                throw InterpreterError.undefinedExpression(rhs.location)
             }
-            guard let value = apply(op, lvalue, rvalue) else {
-                throw Error.undefinedExpression(lhs.location)
+            guard let value = evaluate(lvalue, op, rvalue) else {
+                throw InterpreterError.undefinedExpression(lhs.location)
             }
             return value
         case .boolean(let value):
             return BooleanObject(value)
         case .call(let callee, let arguments):
             guard let object = try visit(callee) else {
-                throw Error.undefinedExpression(expression.location)
+                throw InterpreterError.undefinedExpression(expression.location)
             }
             var values: [RuntimeObject] = []
             values.reserveCapacity(arguments.count)
             for argument in arguments {
                 guard let value = try visit(argument) else {
-                    throw Error.undefinedExpression(argument.location)
+                    throw InterpreterError.undefinedExpression(argument.location)
                 }
                 values.append(value)
             }
             guard let output = object.call(self, values) else {
-                throw Error.objectIsNotCallable(callee.location)
+                throw InterpreterError.objectIsNotCallable(callee.location)
             }
             return output
         case .color(let value):
             return ColorObject(value)
         case .getter(let name):
             guard let value = environment.get(name) else {
-                throw Error.undefinedVariable(name, expression.location)
+                throw InterpreterError.undefinedVariable(name, expression.location)
             }
             return value
         case .keyword(let name):
-            throw Error.invalidKeywordUsage(name, expression.location)
+            throw InterpreterError.invalidKeywordUsage(name, expression.location)
         case .number(let value):
             return NumberObject(value)
         case .setter(let name, let expression):
             guard let value = try visit(expression) else {
-                throw Error.undefinedExpression(expression.location)
+                throw InterpreterError.undefinedExpression(expression.location)
             }
             environment.set(name, value)
             return nil
@@ -218,17 +175,17 @@ extension Interpreter: ASTVisitor {
             return StringObject(value)
         case .unary(let op, let rhs):
             guard let rvalue = try visit(rhs) else {
-                throw Error.undefinedExpression(rhs.location)
+                throw InterpreterError.undefinedExpression(rhs.location)
             }
-            guard let value = apply(op, rvalue) else {
-                throw Error.undefinedExpression(rhs.location)
+            guard let value = evaluate(op, rvalue) else {
+                throw InterpreterError.undefinedExpression(rhs.location)
             }
             return value
         }
     }
     
-    public func visit(_ statement: AST.Statement) throws -> RuntimeObject? {
-        switch statement.symbol {
+    public func visit(_ statement: ASTStatement) throws -> RuntimeObject? {
+        switch statement.type {
         case .declaration(let declaration):
             switch declaration {
             case .function(_, _, _):
@@ -238,15 +195,55 @@ extension Interpreter: ASTVisitor {
                 
             case .variable(let name, let expression):
                 guard let value = try visit(expression) else {
-                    throw Error.undefinedExpression(expression.location)
+                    throw InterpreterError.undefinedExpression(expression.location)
                 }
                 if !environment.define(name, value) {
-                    throw Error.redefinedVariable(name, statement.location)
+                    throw InterpreterError.redefinedVariable(name, statement.location)
                 }
             }
             return nil
         case .expression(let expression):
             return try visit(expression)
+        }
+    }
+
+    private let environment: Environment
+}
+
+public enum InterpreterError: Swift.Error, CustomStringConvertible {
+    case invalidKeywordUsage(TokenKeyword, SourceLocation)
+    case redefinedVariable(TokenIdentifier, SourceLocation)
+    case objectIsNotCallable(SourceLocation)
+    case undefinedVariable(TokenIdentifier, SourceLocation)
+    case undefinedExpression(SourceLocation)
+    
+    public var description: String {
+        switch self {
+        case .invalidKeywordUsage(let keyword, _):
+            return "Reserved keyword '\(keyword)' cannot be used in an expression."
+        case .redefinedVariable(let name, _):
+            return "Variable '\(name)' has already been defined in this scope."
+        case .objectIsNotCallable(_):
+            return "Object is not a callable function."
+        case .undefinedVariable(let name, _):
+            return "Variable '\(name)' is undefined in this scope."
+        case .undefinedExpression(_):
+            return "Expression is undefined."
+        }
+    }
+    
+    public var location: SourceLocation {
+        switch self {
+        case .invalidKeywordUsage(_, let location):
+            return location
+        case .redefinedVariable(_, let location):
+            return location
+        case .objectIsNotCallable(let location):
+            return location
+        case .undefinedVariable(_, let location):
+            return location
+        case .undefinedExpression(let location):
+            return location
         }
     }
 }

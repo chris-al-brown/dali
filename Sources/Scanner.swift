@@ -29,39 +29,6 @@ import Foundation
 
 public final class Scanner {
     
-    public enum Error: Swift.Error, CustomStringConvertible {
-        case unexpectedCharacter(SourceLocation, UnicodeScalar)
-        case unsupportedColorFormat(SourceLocation)
-        case unsupportedNumericFormat(SourceLocation)
-        case unterminatedString(SourceLocation)
-
-        public var description: String {
-            switch self {
-            case .unexpectedCharacter(_, let character):
-                return "Encountered an unsupported character: '\(character)'"
-            case .unsupportedColorFormat(_):
-                return "Colors are only supported in hexadecimal RGB format."
-            case .unsupportedNumericFormat(_):
-                return "Numbers are only supported in simple double and integer formats."
-            case .unterminatedString(_):
-                return "Strings require a closing double quote and cannot span multiple lines."
-            }
-        }
-
-        public var location: SourceLocation {
-            switch self {
-            case .unexpectedCharacter(let location, _):
-                return location
-            case .unsupportedColorFormat(let location):
-                return location
-            case .unsupportedNumericFormat(let location):
-                return location
-            case .unterminatedString(let location):
-                return location
-            }
-        }
-    }
-
     public init(_ source: Source) {
         self.source = source
         self.tokens = []
@@ -75,7 +42,7 @@ public final class Scanner {
         return scalar
     }
     
-    private func append(lexeme: Token.Lexeme) {
+    private func append(lexeme: TokenLexeme) {
         tokens.append(Token(lexeme, locate()))
     }
 
@@ -189,7 +156,7 @@ public final class Scanner {
                     if isHex(peek()) {
                         let _ = advance()
                     } else {
-                        throw Error.unsupportedColorFormat(locate())
+                        throw ScannerError.unsupportedColorFormat(locate())
                     }
                 }
                 let index = source.unicodeScalars.index(after:start)
@@ -199,7 +166,7 @@ public final class Scanner {
             case "\"":
                 while peek() != "\"" && !isFinished {
                     if peek() == "\n" {
-                        throw Error.unterminatedString(locate())
+                        throw ScannerError.unterminatedString(locate())
                     }
                     let _ = advance()
                 }
@@ -212,7 +179,7 @@ public final class Scanner {
                     append(lexeme:.string(String(source.unicodeScalars[lower..<upper])))
                 } else {
                     // Unterminated string error
-                    throw Error.unterminatedString(locate())
+                    throw ScannerError.unterminatedString(locate())
                 }
                 
             /// Literals (number, boolean), identifiers and keywords
@@ -239,7 +206,7 @@ public final class Scanner {
                             while isAlpha(peek()) || isDigit(peek()) {
                                 let _ = advance()
                             }
-                            throw Error.unsupportedNumericFormat(locate())
+                            throw ScannerError.unsupportedNumericFormat(locate())
                         }
                     }
                     
@@ -248,7 +215,7 @@ public final class Scanner {
                         append(lexeme:.number(value))
                     } else {
                         // Failed numeric conversion error
-                        throw Error.unsupportedNumericFormat(locate())
+                        throw ScannerError.unsupportedNumericFormat(locate())
                     }
 
                 /// Literals (boolean), identifiers and keywords
@@ -257,7 +224,7 @@ public final class Scanner {
                         let _ = advance()
                     }
                     let value = String(String(source.unicodeScalars[locate()]))
-                    if let keyword = Token.Keyword.lexeme(for:value) {
+                    if let keyword = TokenKeyword.lexeme(for:value) {
                         append(lexeme:keyword)
                     } else {
                         append(lexeme:.identifier(value))
@@ -266,7 +233,7 @@ public final class Scanner {
                 /// Failure
                 } else {
                     // Unexpected character error
-                    throw Error.unexpectedCharacter(locate(), character)
+                    throw ScannerError.unexpectedCharacter(locate(), character)
                 }
             }
         }
@@ -282,6 +249,39 @@ public final class Scanner {
     private var tokens: [Token]
     private var start: SourceIndex
     private var current: SourceIndex
+}
+
+public enum ScannerError: Swift.Error, CustomStringConvertible {
+    case unexpectedCharacter(SourceLocation, UnicodeScalar)
+    case unsupportedColorFormat(SourceLocation)
+    case unsupportedNumericFormat(SourceLocation)
+    case unterminatedString(SourceLocation)
+    
+    public var description: String {
+        switch self {
+        case .unexpectedCharacter(_, let character):
+            return "Encountered an unsupported character: '\(character)'"
+        case .unsupportedColorFormat(_):
+            return "Colors are only supported in hexadecimal RGB format."
+        case .unsupportedNumericFormat(_):
+            return "Numbers are only supported in simple double and integer formats."
+        case .unterminatedString(_):
+            return "Strings require a closing double quote and cannot span multiple lines."
+        }
+    }
+    
+    public var location: SourceLocation {
+        switch self {
+        case .unexpectedCharacter(let location, _):
+            return location
+        case .unsupportedColorFormat(let location):
+            return location
+        case .unsupportedNumericFormat(let location):
+            return location
+        case .unterminatedString(let location):
+            return location
+        }
+    }
 }
 
 

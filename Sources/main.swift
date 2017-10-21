@@ -22,7 +22,7 @@
 // dali
 // main.swift
 // 01/20/2017
-// Main entry point for the command line tool
+// Main program entry point for the command line tool
 // -----------------------------------------------------------------------------
 
 import Foundation
@@ -37,7 +37,7 @@ public typealias SourceScalar = UnicodeScalar
 
 public final class Dali {
     
-    public enum Mode {
+    private enum Mode {
         case file(String)
         case help
         case repl
@@ -94,11 +94,11 @@ public final class Dali {
                 }
             }
             return .success
-        } catch let issue as Interpreter.Error {
+        } catch let issue as InterpreterError {
             error(issue, in:source)
-        } catch let issue as Scanner.Error {
+        } catch let issue as ScannerError {
             error(issue, in:source)
-        } catch let issue as Parser.Error {
+        } catch let issue as ParserError {
             error(issue, in:source)
         } catch {
             fatalError("Unexpected error: \(error)")
@@ -129,15 +129,15 @@ public final class Dali {
         error(message)
     }
     
-    public func error(_ issue: Interpreter.Error, in source: Source) {
+    public func error(_ issue: InterpreterError, in source: Source) {
         error("RuntimeError: \(issue.description)", in:source, at:issue.location)
     }
     
-    public func error(_ issue: Parser.Error, in source: Source) {
+    public func error(_ issue: ParserError, in source: Source) {
         error("SyntaxError: \(issue.description)", in:source, at:issue.location)
     }
     
-    public func error(_ issue: Scanner.Error, in source: Source) {
+    public func error(_ issue: ScannerError, in source: Source) {
         error("SyntaxError: \(issue.description)", in:source, at:issue.location)
     }
     
@@ -177,7 +177,7 @@ public final class Dali {
         print(message, separator:"", terminator:terminator)
     }
     
-    public func log(_ expression: AST.Expression) {
+    public func log(_ expression: ASTExpression) {
         print(expression.description)
     }
     
@@ -185,7 +185,7 @@ public final class Dali {
         print(object.description)
     }
     
-    public func log(_ statement: AST.Statement) {
+    public func log(_ statement: ASTStatement) {
         print(statement.description)
     }
     

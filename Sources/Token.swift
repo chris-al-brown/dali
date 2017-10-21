@@ -29,134 +29,131 @@ import Foundation
 
 public struct Token {
     
-    public typealias Identifier = String
-    
-    public enum Keyword: String {
-        case `func` = "func"
-        case `var`  = "var"
-        
-        public static func lexeme(for string: String) -> Lexeme? {
-            switch string {
-            case "func":
-                return .keyword(.func)
-            case "var":
-                return .keyword(.var)
-            case "true":
-                return .boolean(true)
-            case "false":
-                return .boolean(false)
-            default:
-                return nil
-            }
-        }
-    }
-    
-    public enum Lexeme: Equatable {
-        
-        /// Single-character tokens
-        case colon                  /// :
-        case comma                  /// ,
-        case curlyLeft              /// {
-        case curlyRight             /// }
-        case parenLeft              /// (
-        case parenRight             /// )
-
-        /// Single-character tokens (arithmetic)
-        case plus                   /// +
-        case minus                  /// -
-        case star                   /// *
-        case slash                  /// /
-        
-        /// Single-character tokens (comparison)
-        case equal                  /// =
-        case carrotLeft             /// <
-        case carrotRight            /// >
-        
-        /// Single-character tokens (logical)
-        case exclamation            /// !
-        case ampersand              /// &
-        case bar                    /// |
-        
-        /// Literals
-        case boolean(Bool)          /// true or false
-        case color(String)          /// #efefef
-        case number(Double)         /// 1.512 or 15
-        case string(String)         /// "This is a string"
-        
-        /// Identifier
-        case identifier(Identifier) /// person
-        
-        /// Keywords
-        case keyword(Keyword)       /// var, func
-        
-        /// End of file
-        case end                    /// EOF
-        
-        public static func ==(lhs: Lexeme, rhs: Lexeme) -> Bool {
-            switch (lhs, rhs) {
-            case (.colon, .colon):
-                return true
-            case (.comma, .comma):
-                return true
-            case (.curlyLeft, .curlyLeft):
-                return true
-            case (.curlyRight, .curlyRight):
-                return true
-            case (.parenLeft, .parenLeft):
-                return true
-            case (.parenRight, .parenRight):
-                return true
-            case (.plus, .plus):
-                return true
-            case (.minus, .minus):
-                return true
-            case (.star, .star):
-                return true
-            case (.slash, .slash):
-                return true
-            case (.equal, .equal):
-                return true
-            case (.carrotLeft, .carrotLeft):
-                return true
-            case (.carrotRight, .carrotRight):
-                return true
-            case (.exclamation, .exclamation):
-                return true
-            case (.ampersand, .ampersand):
-                return true
-            case (.bar, .bar):
-                return true
-            case (.string(let lvalue), .string(let rvalue)):
-                return lvalue == rvalue
-            case (.number(let lvalue), .number(let rvalue)):
-                return lvalue == rvalue
-            case (.boolean(let lvalue), .boolean(let rvalue)):
-                return lvalue == rvalue
-            case (.color(let lvalue), .color(let rvalue)):
-                return lvalue == rvalue
-            case (.identifier(let lvalue), .identifier(let rvalue)):
-                return lvalue == rvalue
-            case (.keyword(let lvalue), .keyword(let rvalue)):
-                return lvalue == rvalue
-            case (.end, .end):
-                return true
-            default:
-                return false
-            }
-        }
-    }
-    
-    public init(_ lexeme: Lexeme, _ location: SourceLocation) {
+    public init(_ lexeme: TokenLexeme, _ location: SourceLocation) {
         self.lexeme = lexeme
         self.location = location
     }
 
-    public let lexeme: Lexeme
+    public let lexeme: TokenLexeme
     public let location: SourceLocation
 }
 
-extension Token.Lexeme: CustomStringConvertible {
+public typealias TokenIdentifier = String
 
+public enum TokenKeyword: String {
+    case `func` = "func"
+    case `var`  = "var"
+    
+    public static func lexeme(for string: String) -> TokenLexeme? {
+        switch string {
+        case "func":
+            return .keyword(.func)
+        case "var":
+            return .keyword(.var)
+        case "true":
+            return .boolean(true)
+        case "false":
+            return .boolean(false)
+        default:
+            return nil
+        }
+    }
+}
+
+public enum TokenLexeme: CustomStringConvertible, Equatable {
+    
+    /// Single-character tokens
+    case colon                          /// :
+    case comma                          /// ,
+    case curlyLeft                      /// {
+    case curlyRight                     /// }
+    case parenLeft                      /// (
+    case parenRight                     /// )
+    
+    /// Single-character tokens (arithmetic)
+    case plus                           /// +
+    case minus                          /// -
+    case star                           /// *
+    case slash                          /// /
+    
+    /// Single-character tokens (comparison)
+    case equal                          /// =
+    case carrotLeft                     /// <
+    case carrotRight                    /// >
+    
+    /// Single-character tokens (logical)
+    case exclamation                    /// !
+    case ampersand                      /// &
+    case bar                            /// |
+    
+    /// Literals
+    case boolean(Bool)                  /// true or false
+    case color(String)                  /// #efefef
+    case number(Double)                 /// 1.512 or 15
+    case string(String)                 /// "This is a string"
+    
+    /// Identifier
+    case identifier(TokenIdentifier)    /// person
+    
+    /// Keywords
+    case keyword(TokenKeyword)          /// var, func
+    
+    /// End of file
+    case end                            /// EOF
+    
+    public static func ==(lhs: TokenLexeme, rhs: TokenLexeme) -> Bool {
+        switch (lhs, rhs) {
+        case (.colon, .colon):
+            return true
+        case (.comma, .comma):
+            return true
+        case (.curlyLeft, .curlyLeft):
+            return true
+        case (.curlyRight, .curlyRight):
+            return true
+        case (.parenLeft, .parenLeft):
+            return true
+        case (.parenRight, .parenRight):
+            return true
+        case (.plus, .plus):
+            return true
+        case (.minus, .minus):
+            return true
+        case (.star, .star):
+            return true
+        case (.slash, .slash):
+            return true
+        case (.equal, .equal):
+            return true
+        case (.carrotLeft, .carrotLeft):
+            return true
+        case (.carrotRight, .carrotRight):
+            return true
+        case (.exclamation, .exclamation):
+            return true
+        case (.ampersand, .ampersand):
+            return true
+        case (.bar, .bar):
+            return true
+        case (.string(let lvalue), .string(let rvalue)):
+            return lvalue == rvalue
+        case (.number(let lvalue), .number(let rvalue)):
+            return lvalue == rvalue
+        case (.boolean(let lvalue), .boolean(let rvalue)):
+            return lvalue == rvalue
+        case (.color(let lvalue), .color(let rvalue)):
+            return lvalue == rvalue
+        case (.identifier(let lvalue), .identifier(let rvalue)):
+            return lvalue == rvalue
+        case (.keyword(let lvalue), .keyword(let rvalue)):
+            return lvalue == rvalue
+        case (.end, .end):
+            return true
+        default:
+            return false
+        }
+    }
+    
     public var description: String {
         switch self {
         case .colon:
