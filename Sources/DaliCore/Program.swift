@@ -35,7 +35,7 @@ public typealias SourceLocation = Range<SourceIndex>
 
 public typealias SourceScalar = UnicodeScalar
 
-public final class Dali {
+public final class Program {
     
     private enum Mode {
         case file(String)
@@ -260,9 +260,5 @@ public final class Dali {
     private let iterm: Bool
     private let mode: Mode
 }
-
-/// Start the program
-let dali = Dali(CommandLine.arguments)
-dali.run()
 
 
