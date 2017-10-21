@@ -87,6 +87,17 @@ public final class Parser {
             lhs = ASTExpression(.binary(lhs, binary, rhs), location(from:lhs.location))
         }
     }
+    
+    private func parseBlock() throws -> [ASTStatement] {
+        let _ = try consume(.curlyLeft)
+        var block: [ASTStatement] = []
+        while !check(.curlyRight) {
+            
+            block.append(try parseDeclaration())
+        }
+        let _ = try consume(.curlyRight)
+        return block
+    }
 
     private func parseBoolean(_ value: Bool) throws -> ASTExpression {
         let start = current
@@ -129,6 +140,8 @@ public final class Parser {
                 return try parseFuncDeclaration()
             case .var:
                 return try parseVarDeclaration()
+            case .return:
+                return try parseReturnStatement()
             }
         default:
             return try parseStatement()
@@ -143,27 +156,21 @@ public final class Parser {
             let _ = try consume(.identifier(name))
             let _ = try consume(.colon)
             let _ = try consume(.parenLeft)
-            var args: [TokenIdentifier] = []
+            var arguments: [TokenIdentifier] = []
             while !check(.parenRight) {
                 switch current.lexeme {
-                case .identifier(let value):
-                    let _ = try consume(.identifier(value))
-                    args.append(value)
+                case .identifier(let argname):
+                    let _ = try consume(.identifier(argname))
+                    arguments.append(argname)
                     if check(.comma) {
                         let _ = try consume(.comma)
                     }
                 default:
-                    throw ParserError.invalidArgument(current)
+                    throw ParserError.invalidFuncArgument(current)
                 }
             }
             let _ = try consume(.parenRight)
-            let _ = try consume(.curlyLeft)
-            var body: [ASTStatement] = []
-            while !check(.curlyRight) {
-                body.append(try parseDeclaration())
-            }
-            let _ = try consume(.curlyRight)
-            return ASTStatement(.declaration(.function(name, args, body)), location(from:start))
+            return ASTStatement(.declaration(.function(name, arguments, try parseBlock())), location(from:start))
         default:
             throw ParserError.invalidFuncDeclaration(location(from:start))
         }
@@ -187,6 +194,13 @@ public final class Parser {
         return try parseExpressionStatement()
     }
 
+    private func parseReturnStatement() throws -> ASTStatement {
+        let start = current
+        let _ = try consume(.keyword(.return))
+        let rvalue = try parseExpression()
+        return ASTStatement(.return(rvalue), location(from:start))
+    }
+    
     private func parseExpressionStatement() throws -> ASTStatement {
         let rvalue = try parseExpression()
         return ASTStatement(.expression(rvalue), current.location)
@@ -294,8 +308,8 @@ public final class Parser {
 }
 
 public enum ParserError: Swift.Error, CustomStringConvertible {
-    case invalidArgument(Token)
     case invalidAssignment(SourceLocation)
+    case invalidFuncArgument(Token)
     case invalidFuncDeclaration(SourceLocation)
     case invalidSyntax(Token)
     case invalidVarDeclaration(SourceLocation)
@@ -304,10 +318,10 @@ public enum ParserError: Swift.Error, CustomStringConvertible {
     
     public var description: String {
         switch self {
-        case .invalidArgument(let token):
-            return "Unexpected closure argument at '\(token.lexeme)'"
         case .invalidAssignment(_):
-            return "Can not assign to the left side of the expression."
+            return "Cannot assign to the left side of the expression."
+        case .invalidFuncArgument(let token):
+            return "Invalid function argument '\(token.lexeme)'"
         case .invalidFuncDeclaration(_):
             return "Invalid syntax for a function declaration."
         case .invalidSyntax(let token):
@@ -323,10 +337,10 @@ public enum ParserError: Swift.Error, CustomStringConvertible {
     
     public var location: SourceLocation {
         switch self {
-        case .invalidArgument(let token):
-            return token.location
         case .invalidAssignment(let location):
             return location
+        case .invalidFuncArgument(let token):
+            return token.location
         case .invalidFuncDeclaration(let location):
             return location
         case .invalidSyntax(let token):

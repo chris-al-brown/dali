@@ -22,7 +22,7 @@
 // dali
 // Stdlib.swift
 // 10/21/2017
-// Standard library of native functions and objects
+// Native implementations of runtime objects and functions
 // -----------------------------------------------------------------------------
 
 import Foundation
@@ -56,7 +56,7 @@ public struct NativePrintFunction: RuntimeFunction {
     public var arity: Int? {
         return nil
     }
-
+    
     public var description: String {
         return "<function print(...)>"
     }

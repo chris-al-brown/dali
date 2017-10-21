@@ -27,99 +27,21 @@
 
 import Foundation
 
+public enum ReturnException: Swift.Error {
+    case value(RuntimeObject)
+}
+
 public final class Runtime: ASTVisitor {
     
     public init() {
         self.environment = RuntimeEnvironment(RuntimeEnvironment.globals)
     }
-    
-    private func evaluate(_ op: ASTUnaryOperator, _ lhs: RuntimeObject) -> RuntimeObject? {
-        switch op {
-        case .negative:
-            if let left = lhs as? NumberObject {
-                return -left
-            }
-            return nil
-        case .not:
-            if let left = lhs as? BooleanObject {
-                return !left
-            }
-            return nil
-        case .positive:
-            if let left = lhs as? NumberObject {
-                return +left
-            }
-            return nil
-        }
-    }
-    
-    private func evaluate(_ lhs: RuntimeObject, _ op: ASTBinaryOperator, _ rhs: RuntimeObject) -> RuntimeObject? {
-        switch op {
-        case .add:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left + right
-            }
-            if let left = lhs as? StringObject, let right = rhs as? StringObject {
-                return left + right
-            }
-            return nil
-        case .and:
-            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
-                return left && right
-            }
-            return nil
-        case .divide:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left / right
-            }
-            return nil
-        case .equalTo:
-            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
-                return left == right
-            }
-            if let left = lhs as? ColorObject, let right = rhs as? ColorObject {
-                return left == right
-            }
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left == right
-            }
-            if let left = lhs as? StringObject, let right = rhs as? StringObject {
-                return left == right
-            }
-            return nil
-        case .greaterThan:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left > right
-            }
-            return nil
-        case .lesserThan:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left < right
-            }
-            return nil
-        case .multiply:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left * right
-            }
-            return nil
-        case .or:
-            if let left = lhs as? BooleanObject, let right = rhs as? BooleanObject {
-                return left || right
-            }
-            return nil
-        case .subtract:
-            if let left = lhs as? NumberObject, let right = rhs as? NumberObject {
-                return left - right
-            }
-            return nil
-        }
-    }
 
-    public func evaluate(_ statements: [ASTStatement], in environment: RuntimeEnvironment) throws {
-        let current = self.environment
-        self.environment = environment
-        try statements.forEach { try evaluate($0) }
+    public func evaluate(_ statements: [ASTStatement], in current: RuntimeEnvironment) throws {
+        let previous = environment
         self.environment = current
+        try statements.forEach { try evaluate($0) }
+        self.environment = previous
     }
 
     public func evaluate(_ statements: [ASTStatement]) throws {
@@ -139,7 +61,7 @@ public final class Runtime: ASTVisitor {
             guard let rvalue = try visit(rhs) else {
                 throw RuntimeError.undefinedExpression(rhs.location)
             }
-            guard let value = evaluate(lvalue, op, rvalue) else {
+            guard let value = op.evaluate(lvalue, rvalue) else {
                 throw RuntimeError.undefinedExpression(lhs.location)
             }
             return value
@@ -163,7 +85,9 @@ public final class Runtime: ASTVisitor {
             if let arity = function.arity, arity != values.count {
                 throw RuntimeError.functionArityMismatch(callee.location)
             }
-            let output = function.call(self, values)
+            guard let output = function.call(self, values) else {
+                throw RuntimeError.invalidReturnStatement(callee.location)
+            }
             return output
         case .color(let value):
             return ColorObject(value)
@@ -188,7 +112,7 @@ public final class Runtime: ASTVisitor {
             guard let rvalue = try visit(rhs) else {
                 throw RuntimeError.undefinedExpression(rhs.location)
             }
-            guard let value = evaluate(op, rvalue) else {
+            guard let value = op.evaluate(rvalue) else {
                 throw RuntimeError.undefinedExpression(rhs.location)
             }
             return value
@@ -214,6 +138,10 @@ public final class Runtime: ASTVisitor {
             }
         case .expression(let expression):
             let _ = try visit(expression)
+        case .return(let expression):
+            if let value = try visit(expression) {
+                throw ReturnException.value(value)
+            }
         }
     }
     
@@ -241,7 +169,7 @@ public final class RuntimeEnvironment {
     
     public func define(_ name: TokenIdentifier, _ value: RuntimeObject) -> Bool {
         if values[name] == nil {
-            set(name, value)
+            values[name] = value
             return true
         }
         return false
@@ -256,7 +184,11 @@ public final class RuntimeEnvironment {
     }
     
     public func set(_ name: TokenIdentifier, _ value: RuntimeObject) {
-        values[name] = value
+        if values[name] == nil {
+            parent?.set(name, value)
+        } else {
+            values[name] = value
+        }
     }
     
     private let parent: RuntimeEnvironment?
@@ -266,6 +198,7 @@ public final class RuntimeEnvironment {
 public enum RuntimeError: Swift.Error, CustomStringConvertible {
     case functionArityMismatch(SourceLocation)
     case invalidKeywordUsage(TokenKeyword, SourceLocation)
+    case invalidReturnStatement(SourceLocation)
     case redefinedVariable(TokenIdentifier, SourceLocation)
     case objectIsNotCallable(SourceLocation)
     case undefinedVariable(TokenIdentifier, SourceLocation)
@@ -277,6 +210,8 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
             return "Function received the wrong number of arguments."
         case .invalidKeywordUsage(let keyword, _):
             return "Reserved keyword '\(keyword)' cannot be used in an expression."
+        case .invalidReturnStatement(_):
+            return "All functions must include at least one return statement."
         case .redefinedVariable(let name, _):
             return "Variable '\(name)' has already been defined in this scope."
         case .objectIsNotCallable(_):
@@ -294,6 +229,8 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
             return location
         case .invalidKeywordUsage(_, let location):
             return location
+        case .invalidReturnStatement(let location):
+            return location
         case .redefinedVariable(_, let location):
             return location
         case .objectIsNotCallable(let location):
@@ -306,173 +243,13 @@ public enum RuntimeError: Swift.Error, CustomStringConvertible {
     }
 }
 
-public protocol RuntimeObject: CustomStringConvertible {}
-
 public protocol RuntimeFunction: RuntimeObject {
     func call(_ runtime: Runtime, _ arguments: [RuntimeObject]) -> RuntimeObject?
     var arity: Int? { get }
 }
 
-public struct BooleanObject: RuntimeObject {
-    
-    public static func ==(left: BooleanObject, right: BooleanObject) -> BooleanObject {
-        return BooleanObject(left.value == right.value)
-    }
+public protocol RuntimeObject: CustomStringConvertible {}
 
-    public static prefix func !(left: BooleanObject) -> BooleanObject {
-        return BooleanObject(!left.value)
-    }
 
-    public static func &&(left: BooleanObject, right: BooleanObject) -> BooleanObject {
-        return BooleanObject(left.value && right.value)
-    }
 
-    public static func ||(left: BooleanObject, right: BooleanObject) -> BooleanObject {
-        return BooleanObject(left.value || right.value)
-    }
-
-    public init(_ value: Bool) {
-        self.value = value
-    }
-    
-    public var description: String {
-        return "<boolean \(value)>"
-    }
-
-    public let value: Bool
-}
-
-public struct ColorObject: RuntimeObject {
-    
-    public static func ==(left: ColorObject, right: ColorObject) -> BooleanObject {
-        return BooleanObject(left.value == right.value)
-    }
-
-    public init(_ value: UInt32) {
-        self.value = value
-    }
-    
-    public var description: String {
-        return "<color \(value)>"
-    }
-    
-    public let value: UInt32
-}
-
-public struct FunctionObject: RuntimeFunction {
-    
-    public init(_ name: String, _ arguments: [String], _ body: [ASTStatement], _ closure: RuntimeEnvironment) {
-        self.name = name
-        self.arguments = arguments
-        self.body = body
-        self.closure = closure
-    }
-    
-    public func call(_ runtime: Runtime, _ values : [RuntimeObject]) -> RuntimeObject? {
-        let environment = RuntimeEnvironment(closure)
-        for (argument, value) in zip(self.arguments, values) {
-            let _ = environment.define(argument, value)
-        }
-        do {
-            // TODO: Needs a return statement or else nothing is ever returned
-            try runtime.evaluate(body, in:environment)
-        } catch let error {
-            fatalError("FunctionObject call resulted in an unhandled error: " + error.localizedDescription)
-        }
-        return nil
-    }
-    
-    public var description: String {
-        var output = ""
-        output += "\(name)("
-        output += arguments.reduce("") {
-            return $0 + $1 + ", "
-        }
-        if !arguments.isEmpty {
-            let _ = output.unicodeScalars.removeLast()
-            let _ = output.unicodeScalars.removeLast()
-        }
-        output += ")"
-        return "<function \(output)>"
-    }
-    
-    public var arity: Int? {
-        return arguments.count
-    }
-
-    public let name: String
-    public let arguments: [String]
-    public let body: [ASTStatement]
-    public let closure: RuntimeEnvironment
-}
-
-public struct NumberObject: RuntimeObject {
-    
-    public static func ==(left: NumberObject, right: NumberObject) -> BooleanObject {
-        return BooleanObject(left.value == right.value)
-    }
-
-    public static func +(left: NumberObject, right: NumberObject) -> NumberObject {
-        return NumberObject(left.value + right.value)
-    }
-    
-    public static func -(left: NumberObject, right: NumberObject) -> NumberObject {
-        return NumberObject(left.value - right.value)
-    }
-    
-    public static func *(left: NumberObject, right: NumberObject) -> NumberObject {
-        return NumberObject(left.value * right.value)
-    }
-    
-    public static func /(left: NumberObject, right: NumberObject) -> NumberObject {
-        return NumberObject(left.value / right.value)
-    }
-    
-    public static func <(left: NumberObject, right: NumberObject) -> BooleanObject {
-        return BooleanObject(left.value < right.value)
-    }
-    
-    public static func >(left: NumberObject, right: NumberObject) -> BooleanObject {
-        return BooleanObject(left.value > right.value)
-    }
-    
-    public static prefix func +(left: NumberObject) -> NumberObject {
-        return NumberObject(+left.value)
-    }
-
-    public static prefix func -(left: NumberObject) -> NumberObject {
-        return NumberObject(-left.value)
-    }
-
-    public init(_ value: Double) {
-        self.value = value
-    }
-
-    public var description: String {
-        return "<number \(value)>"
-    }
-
-    public let value: Double
-}
-
-public struct StringObject: RuntimeObject {
-    
-    public static func ==(left: StringObject, right: StringObject) -> BooleanObject {
-        return BooleanObject(left.value == right.value)
-    }
-    
-    public static func +(left: StringObject, right: StringObject) -> StringObject {
-        return StringObject(left.value + right.value)
-    }
-
-    public init(_ value: String) {
-        self.value = value
-    }
-
-    public var description: String {
-        return "<string \"\(value)\">"
-    }
-
-    public let value: String
-}
 

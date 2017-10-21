@@ -272,6 +272,8 @@ public struct ASTStatement: CustomStringConvertible {
             }
         case .expression(let expression):
             return expression.description
+        case .return(let expression):
+            return "return \(expression.description)"
         }
     }
 
@@ -282,6 +284,7 @@ public struct ASTStatement: CustomStringConvertible {
 public enum ASTStatementType {
     case declaration(ASTDeclaration)
     case expression(ASTExpression)
+    case `return`(ASTExpression)
 }
 
 public enum ASTUnaryOperator: String {

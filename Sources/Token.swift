@@ -41,8 +41,9 @@ public struct Token {
 public typealias TokenIdentifier = String
 
 public enum TokenKeyword: String {
-    case `func` = "func"
-    case `var`  = "var"
+    case `func`     = "func"
+    case `var`      = "var"
+    case `return`   = "return"
     
     public static func lexeme(for string: String) -> TokenLexeme? {
         switch string {
@@ -50,6 +51,8 @@ public enum TokenKeyword: String {
             return .keyword(.func)
         case "var":
             return .keyword(.var)
+        case "return":
+            return .keyword(.return)
         case "true":
             return .boolean(true)
         case "false":

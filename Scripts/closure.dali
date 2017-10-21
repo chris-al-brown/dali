@@ -1,7 +1,7 @@
 % Testing closure scoping 
 
-%func name: (first, last) { first + " " + last }
-%print(name("Chris", "Brown"))
+% func name: (first, last) { first + " " + last }
+% print(name("Chris", "Brown"))
 
 func outer: () {
 	print("outer", outer)
@@ -19,8 +19,7 @@ func outer: () {
 		print(x, y)
 	}
 
-	inner()
-	print(x, y)
+	return inner()
 }
 
 outer()
