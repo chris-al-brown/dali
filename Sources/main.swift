@@ -49,7 +49,7 @@ public final class Dali {
     }
     
     public init(_ args: [String]) {
-        self.interpreter = Interpreter()
+        self.runtime = Runtime()
         let environment = ProcessInfo.processInfo.environment
         self.iterm = environment["XPC_SERVICE_NAME"]?.range(of:"Xcode") == nil
         switch args.count {
@@ -87,14 +87,14 @@ public final class Dali {
         do {
             let scanner = Scanner(source)
             let parser = Parser(try scanner.scan())
-            let objects = try interpreter.interpret(try parser.parse())
+            let objects = try runtime.evaluate(try parser.parse())
             objects.forEach {
                 if let object = $0 {
                     log(object)
                 }
             }
             return .success
-        } catch let issue as InterpreterError {
+        } catch let issue as RuntimeError {
             error(issue, in:source)
         } catch let issue as ScannerError {
             error(issue, in:source)
@@ -129,7 +129,7 @@ public final class Dali {
         error(message)
     }
     
-    public func error(_ issue: InterpreterError, in source: Source) {
+    public func error(_ issue: RuntimeError, in source: Source) {
         error("RuntimeError: \(issue.description)", in:source, at:issue.location)
     }
     
@@ -261,7 +261,7 @@ public final class Dali {
         }
     }
     
-    private let interpreter: Interpreter
+    private let runtime: Runtime
     private let iterm: Bool
     private let mode: Mode
 }
